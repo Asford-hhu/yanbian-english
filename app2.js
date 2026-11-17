@@ -11,41 +11,91 @@
   const getS = () => window.__YANBIAN__.getS();
   const save = () => window.__YANBIAN__.save();
 
-  /* ---------- 词汇：语境记忆 ---------- */
+  /* ---------- 词汇：语境记忆（1500+ 词，支持搜索/筛选/分页） ---------- */
+  // 合并原精讲词 + 扩展词库，按单词去重（精讲词优先，保留其精心撰写的 tip）
+  const VOCAB_ALL = (function buildVocab() {
+    const base = (DATA.vocab || []).map(v => Object.assign({ level: '精讲' }, v));
+    const extra = window.YANBIAN_VOCAB_1500 || [];
+    const seen = new Set(base.map(v => v.word.toLowerCase()));
+    const merged = base.slice();
+    extra.forEach(v => { if (!seen.has(v.word.toLowerCase())) { seen.add(v.word.toLowerCase()); merged.push(v); } });
+    return merged;
+  })();
+
   R.vocab = function () {
     const root = $('#view-vocab');
     const S = getS();
-    let filterFav = false;
-    const render = () => {
-      const list = filterFav ? DATA.vocab.filter(v => S.vocabSaved.includes(v.word)) : DATA.vocab;
-      const cards = list.length ? list.map((v, i) => {
-        const saved = S.vocabSaved.includes(v.word);
-        return `<div class="card card--hover word-card" data-i="${DATA.vocab.indexOf(v)}">
-          <div><span class="word-card__word">${esc(v.word)}</span><span class="word-card__pos">${esc(v.pos)}</span></div>
-          <p class="word-card__sentence">${highlightWord(v.sentence, v.word)}</p>
-          <div class="word-card__meaning">释义：${esc(v.meaning)}</div>
-          <div style="font-family:var(--font-serif);font-size:.8rem;color:var(--ink-faint);margin-top:var(--sp-2)">✎ ${esc(v.tip)}</div>
-          <div class="word-card__actions">
-            <button class="speak-btn" data-speak="${esc(v.sentence)}"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a4 4 0 0 1 0 6"/></svg>读句子</button>
-            <button class="btn btn--sm ${saved ? 'btn--pine' : ''}" data-save="${esc(v.word)}">${saved ? '✓ 已在生词本' : '+ 加入生词本'}</button>
-          </div>
-        </div>`;
-      }).join('') : `<div class="empty"><span class="empty__mark">∅</span><p>${filterFav ? '生词本还是空的，先在全部词汇里挑几个吧。' : '没有词汇'}</p></div>`;
+    const PAGE = 24;
+    let filter = 'all';       // all | saved | 四级 | 六级 | 精讲
+    let query = '';
+    let shown = PAGE;
+
+    const matches = () => {
+      const q = query.trim().toLowerCase();
+      return VOCAB_ALL.filter(v => {
+        if (filter === 'saved' && !S.vocabSaved.includes(v.word)) return false;
+        if ((filter === '四级' || filter === '六级' || filter === '精讲') && v.level !== filter) return false;
+        if (q && !(v.word.toLowerCase().includes(q) || (v.meaning || '').includes(q) || (v.sentence || '').toLowerCase().includes(q))) return false;
+        return true;
+      });
+    };
+
+    const cardHtml = (v, idx) => {
+      const saved = S.vocabSaved.includes(v.word);
+      const lvl = v.level === '精讲' ? '<span class="tag tag--accent">精讲</span>'
+        : v.level === '六级' ? '<span class="tag tag--pine">六级</span>' : '';
+      return `<div class="card card--hover word-card" data-i="${idx}">
+        <div><span class="word-card__word">${esc(v.word)}</span>${v.pos ? `<span class="word-card__pos">${esc(v.pos)}</span>` : ''}${lvl}</div>
+        <p class="word-card__sentence">${highlightWord(v.sentence, v.word)}</p>
+        <div class="word-card__meaning">释义：${esc(v.meaning)}</div>
+        <div style="font-family:var(--font-serif);font-size:.8rem;color:var(--ink-faint);margin-top:var(--sp-2)">✎ ${esc(v.tip)}</div>
+        <div class="word-card__actions">
+          <button class="speak-btn" data-speak="${esc(v.sentence)}"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a4 4 0 0 1 0 6"/></svg>读句子</button>
+          <button class="btn btn--sm ${saved ? 'btn--pine' : ''}" data-save="${esc(v.word)}">${saved ? '✓ 已在生词本' : '+ 加入生词本'}</button>
+        </div>
+      </div>`;
+    };
+
+    const render = (keepFocus) => {
+      const list = matches();
+      const slice = list.slice(0, shown);
+      const cards = slice.length ? slice.map((v, i) => cardHtml(v, i)).join('')
+        : `<div class="empty"><span class="empty__mark">∅</span><p>${filter === 'saved' ? '生词本还是空的，遇到好词点「加入生词本」吧。' : '没有找到匹配的词，换个关键词试试。'}</p></div>`;
+      const moreBtn = list.length > shown
+        ? `<div class="load-more"><button class="btn btn--outline" id="vocab-more">加载更多 · 还有 ${(list.length - shown)} 个</button></div>` : '';
+      const chips = [['all', '全部'], ['saved', '生词本'], ['四级', '四级'], ['六级', '六级'], ['精讲', '精讲']]
+        .map(([k, label]) => {
+          let n = VOCAB_ALL.length;
+          if (k === 'saved') n = S.vocabSaved.length;
+          else if (k !== 'all') n = VOCAB_ALL.filter(v => v.level === k).length;
+          return `<button class="filter-chip ${filter === k ? 'is-active' : ''}" data-fav="${k}">${label} (${n})</button>`;
+        }).join('');
       root.innerHTML = `
         <div class="filter-bar">
-          <button class="filter-chip ${!filterFav ? 'is-active' : ''}" data-fav="all">全部词汇 (${DATA.vocab.length})</button>
-          <button class="filter-chip ${filterFav ? 'is-active' : ''}" data-fav="saved">我的生词本 (${S.vocabSaved.length})</button>
+          ${chips}
           <span class="tag tag--pine">语境记忆 · 拒绝孤立背词</span>
         </div>
+        <div class="vocab-search">
+          <input type="search" id="vocab-q" placeholder="搜单词、释义或例句…" value="${esc(query)}" autocomplete="off">
+          <span class="vocab-count">找到 ${list.length} 个词</span>
+        </div>
         <div class="grid grid--2">${cards}</div>
+        ${moreBtn}
       `;
-      $$('.filter-chip', root).forEach(b => b.addEventListener('click', () => { filterFav = b.dataset.fav === 'saved'; render(); }));
+      $$('.filter-chip', root).forEach(b => b.addEventListener('click', () => { filter = b.dataset.fav; query = ''; shown = PAGE; render(); }));
+      const input = $('#vocab-q', root);
+      if (input) {
+        input.addEventListener('input', (e) => { query = e.target.value; shown = PAGE; render(true); });
+        if (keepFocus) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+      }
+      const more = $('#vocab-more', root);
+      if (more) more.addEventListener('click', () => { shown += PAGE; render(); });
       $$('[data-speak]', root).forEach(b => b.addEventListener('click', () => speak(b.dataset.speak)));
       $$('[data-save]', root).forEach(b => b.addEventListener('click', () => {
         const w = b.dataset.save;
         if (S.vocabSaved.includes(w)) { S.vocabSaved = S.vocabSaved.filter(x => x !== w); toast('已从生词本移除'); }
         else { S.vocabSaved.push(w); toast('已加入生词本'); }
-        save(); render();
+        save(); render(true);
       }));
     };
     render();

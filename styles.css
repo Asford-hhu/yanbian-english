@@ -448,6 +448,23 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .filter-chip:hover { border-color: var(--rule-strong); }
 .filter-chip.is-active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
+/* 词汇搜索 + 加载更多 */
+.vocab-search { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin: 0 0 var(--sp-5); }
+.vocab-search input[type="search"] {
+  flex: 1 1 280px; min-width: 200px;
+  padding: 10px 16px; border: 1px solid var(--rule-strong); border-radius: 6px;
+  background: var(--paper); color: var(--ink);
+  font-family: var(--font-serif); font-size: .92rem;
+  transition: border-color .2s var(--ease);
+}
+.vocab-search input[type="search"]:focus { outline: none; border-color: var(--accent); }
+.vocab-search input::placeholder { color: var(--ink-faint); }
+.vocab-count { font-family: var(--font-serif); font-size: .8rem; color: var(--ink-faint); white-space: nowrap; }
+.btn--outline { background: transparent; border-color: var(--rule-strong); color: var(--ink); }
+.btn--outline:hover { border-color: var(--accent); color: var(--accent-ink); }
+.load-more { display: flex; justify-content: center; margin-top: var(--sp-6); }
+.load-more .btn { padding: 10px 28px; }
+
 /* ---------- 11. 词汇（语境卡片） ---------- */
 .word-card { border-left: 3px solid var(--gold); }
 .word-card__word { font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; }
