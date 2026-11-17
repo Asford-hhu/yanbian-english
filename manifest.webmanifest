@@ -1,0 +1,26 @@
+{
+  "name": "砚边 · 英语备考手记",
+  "short_name": "砚边",
+  "description": "四六级与大英赛备考：阅读、写作、词汇、听说、错题本、模考计时。",
+  "start_url": "https://yanbian-english-notebook.app.workbuddy.host/?sharecode=2AY6FI4C24",
+  "scope": "https://yanbian-english-notebook.app.workbuddy.host/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f0e6",
+  "theme_color": "#f5f0e6",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "https://yanbian-english-notebook.app.workbuddy.host/icon-192.png?sharecode=2AY6FI4C24",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://yanbian-english-notebook.app.workbuddy.host/icon-512.png?sharecode=2AY6FI4C24",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
