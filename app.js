@@ -75,23 +75,152 @@
     toast('打卡成功 · 坚持第 ' + streak() + ' 天');
   }
 
-  /* ---------- 2. TTS 发音 ---------- */
+  /* ---------- 2. TTS 发音（原生 → 微软 Edge TTS → 在线兜底） ---------- */
   let voices = [];
+  let currentAudio = null;   // 在线/兜底音频实例，便于打断
+  let ttsSeq = 0;            // 异步竞态令牌：只播放最后一次点击
+
   function initVoices() {
     if (!('speechSynthesis' in window)) return;
     const load = () => { voices = window.speechSynthesis.getVoices() || []; };
     load();
     if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = load;
   }
+
+  function stopSpeak() {
+    ttsSeq++;
+    try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+    if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; }
+  }
+
+  // 主入口：签名保持不变，所有调用处（读句子/朗读全文/听说）无需改动
   function speak(text, rate = 0.95) {
-    if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) { toast('当前浏览器不支持朗读'); return; }
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
-    u.rate = rate;
-    const v = voices.find(x => x.lang.startsWith('en') && /Google US English|Samantha|Microsoft.*English/i.test(x.name)) || voices.find(x => x.lang.startsWith('en'));
-    if (v) u.voice = v;
-    window.speechSynthesis.speak(u);
+    stopSpeak();
+    const seq = ttsSeq;
+    if (!text) return;
+
+    // ① 原生 Web Speech（Chrome / Edge / Safari / 大多数桌面浏览器）
+    if ('speechSynthesis' in window && 'SpeechSynthesisUtterance' in window) {
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'en-US';
+        u.rate = rate;
+        const v = voices.find(x => x.lang.startsWith('en') && /Google US English|Samantha|Microsoft.*English/i.test(x.name)) || voices.find(x => x.lang.startsWith('en'));
+        if (v) u.voice = v;
+        let started = false;
+        u.onstart = () => { started = true; };
+        window.speechSynthesis.speak(u);
+        // 看门狗：某些 WebView 有对象却不出声 → 自动降级（1200ms 内未 onstart 且始终空闲才判定失败）
+        setTimeout(() => {
+          const ss = window.speechSynthesis;
+          if (seq === ttsSeq && !started && !ss.speaking && !ss.pending) {
+            try { ss.cancel(); } catch (e) {}
+            speakOnline(text, rate, seq);
+          }
+        }, 1200);
+        return;
+      } catch (e) { /* 落到在线方案 */ }
+    }
+
+    // ② 微信 / QQ 内置浏览器等无原生 → 在线方案
+    speakOnline(text, rate, seq);
+  }
+
+  /* ---- 在线 TTS：微软 Edge TTS（WebSocket，无需密钥）优先 ---- */
+  const EDGE_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
+  const EDGE_VOICE = 'en-US-AriaNeural';
+  function uuidHex() {
+    return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+  }
+  function xmlEsc(s) {
+    return String(s).replace(/[<>&'"]/g, c => ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', "'":'&apos;', '"':'&quot;' }[c]));
+  }
+
+  async function speakOnline(text, rate, seq) {
+    // Edge TTS 依赖 crypto.subtle（HTTPS 安全上下文）与 WebSocket
+    if (window.crypto && crypto.subtle && typeof WebSocket !== 'undefined') {
+      try {
+        let ticks = Math.floor(Date.now() / 1000) + 11644473600;
+        ticks -= ticks % 300;
+        ticks *= 1e7;
+        const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${Math.floor(ticks)}${EDGE_TOKEN}`));
+        const gec = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+        if (seq !== ttsSeq) return;
+        const rid = uuidHex();
+        const url = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${EDGE_TOKEN}&Sec-MS-GEC=${gec}&Sec-MS-GEC-Version=1-130.0.2849.68&ConnectionId=${uuidHex()}`;
+        const ws = new WebSocket(url);
+        ws.binaryType = 'arraybuffer';
+        const chunks = [];
+        let settled = false;
+        const timer = setTimeout(() => settle(), 12000);
+
+        function settle() {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          try { ws.close(); } catch (e) {}
+          const total = chunks.reduce((s, c) => s + c.length, 0);
+          if (seq !== ttsSeq) return;
+          if (total > 1000) {
+            const merged = new Uint8Array(total); let off = 0;
+            chunks.forEach(c => { merged.set(c, off); off += c.length; });
+            playMp3(merged.buffer, seq, text, rate);
+          } else {
+            playFallback(text, rate, seq);
+          }
+        }
+
+        ws.onopen = () => {
+          const ts = new Date().toUTCString();
+          const pct = Math.round((rate - 1) * 100);
+          const rateStr = (pct >= 0 ? '+' : '') + pct + '%';
+          try {
+            ws.send(`Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\nX-RequestId:${rid}\r\nX-Timestamp:${ts}\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":false,"wordBoundaryEnabled":false},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`);
+            const ssml = `<speak xmlns="http://www.w3.org/2001/10/Synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" version="1.0" xml:lang="en-US"><voice name="${EDGE_VOICE}"><prosody rate="${rateStr}">${xmlEsc(text)}</prosody></voice></speak>`;
+            ws.send(`X-RequestId:${rid}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${ts}\r\nPath:ssml\r\n\r\n${ssml}`);
+          } catch (e) { settle(); }
+        };
+        ws.onmessage = (ev) => {
+          if (typeof ev.data === 'string') {
+            if (ev.data.indexOf('Path:turn.end') >= 0) settle();
+          } else if (ev.data && ev.data.byteLength) {
+            const bytes = new Uint8Array(ev.data);
+            const marker = new TextEncoder().encode('Path:audio\r\n');
+            for (let i = 0; i <= bytes.length - marker.length; i++) {
+              let ok = true;
+              for (let j = 0; j < marker.length; j++) if (bytes[i + j] !== marker[j]) { ok = false; break; }
+              if (ok) { chunks.push(bytes.slice(i + marker.length)); break; }
+            }
+          }
+        };
+        ws.onerror = () => settle();
+        return;
+      } catch (e) { /* 落到兜底 */ }
+    }
+    playFallback(text, rate, seq);
+  }
+
+  function playMp3(buf, seq, text, rate) {
+    if (seq !== ttsSeq) return;
+    try {
+      const url = URL.createObjectURL(new Blob([buf], { type: 'audio/mpeg' }));
+      const a = new Audio(url);
+      currentAudio = a;
+      a.onended = () => URL.revokeObjectURL(url);
+      a.onerror = () => { URL.revokeObjectURL(url); if (seq === ttsSeq) playFallback(text, rate, seq); };
+      a.play().catch(() => { if (seq === ttsSeq) playFallback(text, rate, seq); });
+    } catch (e) { playFallback(text, rate, seq); }
+  }
+
+  // ③ 兜底：百度翻译在线朗读（国内直连稳定，Audio 跨域播放不受 CORS 限制）
+  function playFallback(text, rate, seq) {
+    if (seq !== ttsSeq) return;
+    const spd = Math.max(1, Math.min(9, Math.round(rate * 3.5)));
+    const url = `https://fanyi.baidu.com/gettts?lan=en&text=${encodeURIComponent(text)}&spd=${spd}&source=web`;
+    const a = new Audio(url);
+    currentAudio = a;
+    a.onerror = () => { if (seq === ttsSeq) toast('朗读失败，请检查网络后重试'); };
+    a.play().catch(() => { if (seq === ttsSeq) toast('若无声，点一下屏幕后再试'); });
   }
 
   /* ---------- 3. 主题 ---------- */
