@@ -75,22 +75,23 @@
     toast('打卡成功 · 坚持第 ' + streak() + ' 天');
   }
 
-  /* ---------- 2. TTS 发音（点击手势内直接播放，处处有声） ----------
-     设计要点（2026-11-18 重写）：
-     - 微信/QQ WebView 有严格的自动播放限制：Audio.play() 必须在用户点击的
-       "同步手势"内调用；任何 await/WebSocket 异步之后再 play 都会被拦截，
-       这正是此前"点一下只有提示、没声音"的根因。
-     - 因此主方案改为：点击瞬间同步解锁音频 + 直接用百度翻译 gettts 的
-       MP3 地址播放（国内直连稳定，实测返回真实 audio/mpeg）。
-     - 长文本按句切成 ≤180 字符的小段串行播放，绕开接口长度限制。
-     - 桌面浏览器仍优先原生 speechSynthesis（音质更自然、离线可用）。
-     - speak(text, rate) 签名不变，所有播放按钮（读句子/朗读全文/听说）无需改动。
+  /* ---------- 2. TTS 发音（微信 / 桌面 处处有声） ----------
+     2026-11-18 二次修复，定位到微信无声的真正原因：
+     1) 百度 gettts 有防盗链：请求带 Referer 时返回 0 字节，不带才返回真实 MP3。
+        页面 <meta name="referrer" content="no-referrer"> + audio.referrerPolicy 双保险。
+     2) 微信 WebView 自动播放限制极严：把 audio 挂到 DOM 并显示原生控制条，
+        自动播放被拦时用户点一下播放键 100% 出声（不再只弹一句提示）。
+     3) 万一 no-referrer 被内核忽略：自动降级到有道 dictvoice（带 Referer 也能出声，
+        但只支持短句，故降级时按 30 字符重新切片）。
+     4) 桌面仍优先原生 speechSynthesis；长文按句分段串行播放。
+     speak(text, rate) 签名不变，所有播放按钮（读句子 / 朗读全文 / 听说）无需改动。
   ------------------------------------------------------------------ */
   let voices = [];
   let currentAudio = null;      // 当前在线音频实例，便于打断
   let ttsSeq = 0;               // 异步竞态令牌：只播放最后一次点击
   let audioUnlocked = false;    // 是否已用静音音频解锁自动播放
-  let segTimers = [];           // 分段播放的定时器，便于打断
+  let segTimers = [];           // 分段播放定时器，便于打断
+  let ttsBox = null, ttsAudio = null, ttsHint = null;
 
   function initVoices() {
     if (!('speechSynthesis' in window)) return;
@@ -99,19 +100,16 @@
     if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = load;
   }
 
-  function stopSpeak() {
-    ttsSeq++;
-    try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
-    if (currentAudio) { try { currentAudio.pause(); currentAudio.src = ''; } catch (e) {} currentAudio = null; }
-    segTimers.forEach(t => { try { clearTimeout(t); } catch (e) {} });
-    segTimers = [];
+  // 是否微信 / QQ 等内置浏览器（原生 TTS 常缺失或不出声）
+  function isInAppBrowser() {
+    const ua = navigator.userAgent || '';
+    return /MicroMessenger/i.test(ua) || / QQ\//i.test(ua) || /QQBrowser/i.test(ua) || /Weibo/i.test(ua);
   }
 
-  // 在用户手势内同步播放一段静音音频，解锁微信/QQ 的自动播放限制
+  // 点击手势内同步播放一段静音音频，解锁微信 / QQ 自动播放限制
   function unlockAudio() {
     if (audioUnlocked) return;
     try {
-      // 最短合法的静音 MP3（约 0.1 秒）
       const silent = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjQwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
       const a = new Audio(silent);
       a.volume = 0.01;
@@ -119,12 +117,6 @@
       if (p && typeof p.then === 'function') { p.then(() => { audioUnlocked = true; }).catch(() => {}); }
       else audioUnlocked = true;
     } catch (e) { audioUnlocked = true; }
-  }
-
-  // 是否微信/QQ 等内置浏览器（原生 TTS 常缺失或不出声）
-  function isInAppBrowser() {
-    const ua = navigator.userAgent || '';
-    return /MicroMessenger/i.test(ua) || / QQ\//i.test(ua) || /QQBrowser/i.test(ua) || /Weibo/i.test(ua);
   }
 
   // 按句子把长文本切成若干段，每段不超过 max 字符
@@ -142,7 +134,6 @@
       else buf = buf ? buf + ' ' + s : s;
     });
     if (buf) parts.push(buf);
-    // 单句仍然过长时按词硬切
     const out = [];
     parts.forEach(p => {
       if (p.length <= max) { out.push(p); return; }
@@ -156,96 +147,140 @@
     return out;
   }
 
-  // 主入口：签名不变。核心——所有发音都在本函数的同步调用栈内启动
+  // 创建（或复用）一个挂载在 DOM 上的 audio。微信里显示原生控制条；桌面隐藏。
+  // 挂在 DOM 上比游离的 new Audio() 更容易被微信允许播放。
+  function ensureAudio(visible) {
+    if (ttsAudio && ttsAudio.isConnected) {
+      if (visible) { ttsBox.style.display = 'block'; ttsAudio.controls = true; }
+      return ttsAudio;
+    }
+    hidePlayer();
+    const box = document.createElement('div');
+    box.id = 'yb-tts-player';
+    box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;' +
+      'max-width:560px;margin:0 auto;background:#fff;border:1px solid #d8e3f2;' +
+      'border-radius:14px;box-shadow:0 10px 36px rgba(30,60,110,.22);padding:12px 14px;' +
+      'font:14px/1.5 -apple-system,system-ui,sans-serif;color:#2f3b52;display:' + (visible ? 'block' : 'none');
+    const title = document.createElement('div');
+    title.textContent = '朗读播放器';
+    title.style.cssText = 'font-weight:700;margin-bottom:2px';
+    const hint = document.createElement('div');
+    hint.textContent = visible ? '点下方播放键 ▶ 即可听到声音（微信首次需手动点一次）' : '';
+    hint.style.cssText = 'font-size:12px;color:#7b879b;margin-bottom:8px';
+    const au = document.createElement('audio');
+    au.controls = !!visible;
+    au.preload = 'auto';
+    // 关键：音频请求不带 Referer，绕开百度 TTS 防盗链
+    try { au.referrerPolicy = 'no-referrer'; } catch (e) {}
+    try { au.setAttribute('referrerpolicy', 'no-referrer'); } catch (e) {}
+    au.style.cssText = 'width:100%;height:40px;display:block';
+    const close = document.createElement('button');
+    close.textContent = '收起';
+    close.style.cssText = 'margin-top:8px;border:0;background:#eef3fb;color:#3a5a8c;' +
+      'border-radius:8px;padding:5px 14px;font-size:12px;cursor:pointer';
+    close.onclick = () => { stopSpeak(); };
+    box.appendChild(title); box.appendChild(hint); box.appendChild(au); box.appendChild(close);
+    document.body.appendChild(box);
+    ttsBox = box; ttsAudio = au; ttsHint = hint;
+    currentAudio = au;
+    return au;
+  }
+
+  function revealPlayer(msg) {
+    if (!ttsAudio || !ttsBox) return;
+    ttsBox.style.display = 'block';
+    try { ttsAudio.controls = true; } catch (e) {}
+    if (msg && ttsHint) ttsHint.textContent = msg;
+  }
+
+  function hidePlayer() {
+    if (ttsAudio) { try { ttsAudio.pause(); } catch (e) {} }
+    if (ttsBox && ttsBox.parentNode) { try { ttsBox.parentNode.removeChild(ttsBox); } catch (e) {} }
+    ttsBox = null; ttsAudio = null; ttsHint = null;
+  }
+
+  function stopSpeak() {
+    ttsSeq++;
+    try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+    if (currentAudio) { try { currentAudio.pause(); } catch (e) {} }
+    hidePlayer();
+    currentAudio = null;
+    segTimers.forEach(t => { try { clearTimeout(t); } catch (e) {} });
+    segTimers = [];
+  }
+
+  // 主入口：签名不变。所有发音都在本函数的同步调用栈内启动
   function speak(text, rate = 0.95) {
     stopSpeak();
     const seq = ttsSeq;
     if (!text) return;
-
-    // 第一步：在点击手势内立即解锁音频（同步）
     unlockAudio();
-
-    // 第二步：桌面浏览器优先原生（同步 speak，音质好且离线可用）
-    // 但微信/QQ 内置浏览器跳过原生，直接走在线（原生在微信里常是空壳）
+    // 桌面优先原生（音质自然、离线可用）；微信内置浏览器跳过，直接走在线
     if (!isInAppBrowser() && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window) {
       try {
         const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'en-US';
-        u.rate = rate;
+        u.lang = 'en-US'; u.rate = rate;
         const v = voices.find(x => x.lang && x.lang.indexOf('en') === 0 && /Google US English|Samantha|Microsoft.*English/i.test(x.name)) || voices.find(x => x.lang && x.lang.indexOf('en') === 0);
         if (v) u.voice = v;
         window.speechSynthesis.speak(u);
         return;
       } catch (e) { /* 落到在线方案 */ }
     }
-
-    // 第三步：在线朗读（同步发起第一段音频播放，仍在手势内）
     playOnline(text, rate, seq);
   }
 
-  // 在线朗读：百度 gettts（主，实测国内直连稳定）分段串行；失败重试后兜底原生
+  // 在线朗读：百度主源(no-referrer) → 有道短句备源 → 原生播放器手动点击
   function playOnline(text, rate, seq) {
     if (seq !== ttsSeq) return;
-    const segs = splitForTts(text, 180);
+    const inApp = isInAppBrowser();
+    let a;
+    try { a = ensureAudio(inApp); } catch (e) { a = new Audio(); }
+    if (!a) return;
+    let segs = splitForTts(text, 180);
     const spd = Math.max(1, Math.min(9, Math.round(rate * 3.5)));
     let i = 0;
-    let failedAny = false;
+    let provider = 'baidu';
+    let degraded = false;
+
+    const urlFor = (s) => provider === 'youdao'
+      ? 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(s) + '&le=eng'
+      : 'https://fanyi.baidu.com/gettts?lan=en&text=' + encodeURIComponent(s) + '&spd=' + spd + '&source=web';
 
     const playSeg = () => {
-      if (seq !== ttsSeq) return;
-      if (i >= segs.length) return;
-      const seg = segs[i];
-      const url = `https://fanyi.baidu.com/gettts?lan=en&text=${encodeURIComponent(seg)}&spd=${spd}&source=web`;
-
-      const a = new Audio(url);
-      currentAudio = a;
+      if (seq !== ttsSeq || i >= segs.length) return;
       let advanced = false;
-      const next = (ok) => {
+      const next = () => {
         if (advanced || seq !== ttsSeq) return;
         advanced = true;
-        if (!ok) failedAny = true;
         i++;
         if (i < segs.length) {
-          const t = setTimeout(playSeg, 120);   // 段间短暂停顿
+          const t = setTimeout(playSeg, 150);
           segTimers.push(t);
-        } else if (failedAny) {
-          // 有段失败过，最后尝试原生兜底（桌面）
-          if (!isInAppBrowser() && 'speechSynthesis' in window) {
-            try { window.speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch (e) {}
-          }
         }
       };
-      a.onended = () => next(true);
-      let retried = false;
-      const hardFail = () => {
-        if (advanced || seq !== ttsSeq) return;
-        advanced = true;
-        // 彻底失败：无论什么环境都尝试原生兜底（桌面一定有声；微信若无原生则无声但不报错）
-        if ('speechSynthesis' in window && 'SpeechSynthesisUtterance' in window) {
-          try {
-            const u = new SpeechSynthesisUtterance(String(text).replace(/\s+/g, ' '));
-            u.lang = 'en-US'; u.rate = rate;
-            window.speechSynthesis.speak(u);
-            return;
-          } catch (e) {}
-        }
-        next(false);
-      };
+      a.onended = next;
       a.onerror = () => {
         if (advanced || seq !== ttsSeq) return;
-        // 第一次失败：换 spd 重试一次（绕开接口偶发抖动）；第二次失败走原生兜底
-        if (!retried) {
-          retried = true;
-          const retryUrl = `https://fanyi.baidu.com/gettts?lan=en&text=${encodeURIComponent(seg)}&spd=${spd === 3 ? 4 : 3}&source=web`;
-          try { a.src = retryUrl; a.load(); a.play().catch(hardFail); }
-          catch (e) { hardFail(); }
-        } else hardFail();
+        advanced = true;
+        if (!degraded) {
+          // 百度被防盗链挡住（或网络异常）：切到有道短句音源，带 Referer 也能出声
+          degraded = true;
+          provider = 'youdao';
+          segs = splitForTts(segs.slice(i).join(' '), 30);
+          i = 0;
+          revealPlayer('已切换备用音源，请点播放键 ▶');
+          const t = setTimeout(playSeg, 80);
+          segTimers.push(t);
+        } else {
+          revealPlayer('音源暂时不可用，请点播放键 ▶ 重试');
+        }
       };
-      // 关键：在手势栈内同步调用 play()
+      try { a.src = urlFor(segs[i]); a.load(); } catch (e) {}
+      // 关键：在手势栈内同步调用 play()；被自动播放策略拦截时露出原生播放键
       try {
         const p = a.play();
-        if (p && typeof p.catch === 'function') p.catch(() => { if (!advanced && seq === ttsSeq) hardFail(); });
-      } catch (e) { hardFail(); }
+        if (p && typeof p.catch === 'function') p.catch(() => { revealPlayer('自动播放被拦截，请点下方播放键 ▶'); });
+      } catch (e) { revealPlayer('请点播放键 ▶'); }
     };
     playSeg();
   }
