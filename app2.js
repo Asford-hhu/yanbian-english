@@ -73,6 +73,10 @@
         ? `<div class="word-card__extra"><b>词形</b> ${v.forms.map(f => `${esc(f.label)} <i>${esc(f.word)}</i>`).join(' · ')}</div>` : '';
       const phrases = (v.phrases && v.phrases.length)
         ? `<div class="word-card__extra"><b>短语</b> ${v.phrases.map(p => `${esc(p.en)}（${esc(p.zh)}）`).join('；')}</div>` : '';
+      const syns = (v.synonyms && v.synonyms.length)
+        ? `<div class="word-card__extra word-card__syn"><b>近义</b> ${v.synonyms.map(s => `<i>${esc(s.en)}${s.zh ? `（${esc(s.zh)}）` : ''}</i>`).join(' · ')}</div>` : '';
+      const ants = (v.antonyms && v.antonyms.length)
+        ? `<div class="word-card__extra word-card__ant"><b>反义</b> ${v.antonyms.map(a => `<i>${esc(a.en)}${a.zh ? `（${esc(a.zh)}）` : ''}</i>`).join(' · ')}</div>` : '';
       const sentence = v.sentence ? `<p class="word-card__sentence">${highlightWord(v.sentence, v.word)}</p>` : '';
       return `<div class="card card--hover word-card">
         <div class="word-card__head">
@@ -83,7 +87,7 @@
           </div>
         </div>
         <div class="word-card__meaning">释义：${esc(v.meaning)}</div>
-        ${forms}${phrases}${sentence}
+        ${forms}${phrases}${syns}${ants}${sentence}
         <div class="word-card__actions">
           ${v.sentence ? `<button class="speak-btn" data-speak="${esc(v.sentence)}"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a4 4 0 0 1 0 6"/></svg>读例句</button>` : ''}
           <button class="btn btn--sm ${times ? 'btn--pine' : ''}" data-mark="${esc(v.word)}" title="每点一次，已记背次数 +1">${times ? `✓ 已记背 ${times} 次` : '○ 标记已背'}</button>

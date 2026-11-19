@@ -178,6 +178,10 @@ input, select, textarea {
 }
 .word-card__extra b { color:var(--accent); font-weight:600; margin-right:4px; }
 .word-card__extra i { font-style:italic; color:var(--ink); }
+.word-card__syn b { color:var(--pine); }
+.word-card__syn i { color:var(--pine); }
+.word-card__ant b { color:var(--accent-ink); }
+.word-card__ant i { color:var(--accent-ink); text-decoration:line-through; text-decoration-color:var(--rule-strong); }
 .vocab-marked-note {
   font-family:var(--font-serif); font-size:.86rem; line-height:1.7; color:var(--ink-soft);
   background:var(--pine-wash); border-left:3px solid var(--pine); border-radius:var(--radius);
