@@ -147,7 +147,7 @@
     return esc(sentence).replace(re, '<span class="hl">$1</span>');
   }
 
-  /* ---------- 听说训练（按难/中/易分类） ---------- */
+  /* ---------- 听说训练（多角色配音 + 精准播放器） ---------- */
   let listenRate = 0.95;
   // 难度映射：结合场景与文本长度人工分级
   const LISTEN_DIFF = {
@@ -158,6 +158,30 @@
   const getDiff = (l) => LISTEN_DIFF[l.id] || (l.text.length > 480 ? '难' : l.text.length > 420 ? '中' : '易');
   const DIFF_CLS = { '易':'tag--pine', '中':'tag', '难':'tag--accent' };
 
+  // 本地配音资源（Edge TTS 预生成，含逐句时间轴）；角色音色准确、微信/电脑均可播
+  const LISTEN_AUDIO = () => window.YANBIAN_LISTEN_AUDIO || {};
+  const PLAY_SVG = '<svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg>';
+  const PAUSE_SVG = '<svg viewBox="0 0 24 24"><path d="M7 5h3.2v14H7zM13.8 5H17v14h-3.2z"/></svg>';
+  const fmtTime = (s) => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+
+  // 全局唯一的音频实例：不随视图重绘销毁，保证播放不被打断
+  let laAudio = null, laCurId = null, laRaf = 0;
+  function ensureListenAudio() {
+    if (laAudio && laAudio.isConnected) return laAudio;
+    laAudio = document.createElement('audio');
+    laAudio.id = 'yb-listen-audio';
+    laAudio.preload = 'auto';
+    laAudio.setAttribute('playsinline', '');
+    laAudio.style.display = 'none';
+    document.body.appendChild(laAudio);
+    return laAudio;
+  }
+  function stopListenAudio() {
+    if (laAudio) { try { laAudio.pause(); laAudio.currentTime = 0; } catch (e) {} }
+    if (laRaf) { cancelAnimationFrame(laRaf); laRaf = 0; }
+    laCurId = null;
+  }
+
   R.listening = function () {
     const root = $('#view-listening');
     const S = getS();
@@ -165,9 +189,13 @@
     const visibleList = () => diffFilter === '全部' ? DATA.listening : DATA.listening.filter(l => getDiff(l) === diffFilter);
     let cur = DATA.listening[0];
     let revealed = false;
+    let seeking = false;
+
     const render = () => {
       const list = visibleList();
       if (list.length && !list.includes(cur)) cur = list[0];
+      const meta = LISTEN_AUDIO()[cur.id];
+      const tl = (meta && meta.lines) || [];
       const diffChips = ['全部','易','中','难'].map(d => `<button class="filter-chip ${d === diffFilter ? 'is-active' : ''}" data-ldiff="${d}">${d === '全部' ? '全部' : d}</button>`).join('');
       const blanksHtml = cur.blanks.map((b, i) => {
         const key = `${cur.id}-b${i}`;
@@ -181,6 +209,13 @@
           ${done ? `<span style="font-family:var(--font-serif);font-size:.85rem;margin-left:10px;color:${done.correct ? 'var(--success)' : 'var(--danger)'}">${done.correct ? '✓ 正确' : '✗ 正确答案：' + esc(ans)}</span>` : ''}
         </div>`;
       }).join('');
+      // 逐行渲染台词：角色名单独标签显示（配音里不读角色名）
+      const lineHtml = cur.text.split('\n').filter(x => x.trim()).map((L, i) => {
+        const m = L.match(/^([^:：]{1,20})[:：]\s*(.*)$/);
+        const role = m ? m[1].trim() : (tl[i] && tl[i].role && tl[i].role !== '旁白' ? tl[i].role : '');
+        const body = m ? m[2] : L;
+        return `<p class="tl-line" data-line="${i}">${role ? `<span class="tl-role">${esc(role)}</span>` : ''}${esc(body)}</p>`;
+      }).join('');
       root.innerHTML = `
         <div class="filter-bar">
           <span style="font-family:var(--font-serif);font-size:.9rem;color:var(--ink-soft)">按难度查找：</span>
@@ -192,8 +227,16 @@
         </div>
         <div class="listen-panel">
           <div class="listen-panel__top">
-            <button class="listen-play" id="playBtn" aria-label="播放"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg></button>
-            <div class="listen-panel__hint"><span class="tag ${DIFF_CLS[getDiff(cur)]}" style="padding:1px 7px;font-size:.72rem;margin-right:6px">${getDiff(cur)}</span>${esc(cur.level)} · 点击播放，可反复听；速速调至 0.8× 练辨音</div>
+            <div class="listen-toprow">
+              <button class="listen-play" id="playBtn" aria-label="播放">${PLAY_SVG}</button>
+              <div class="listen-toprow__info">
+                <div class="listen-panel__hint"><span class="tag ${DIFF_CLS[getDiff(cur)]}" style="padding:1px 7px;font-size:.72rem;margin-right:6px">${getDiff(cur)}</span>${esc(cur.level)}<span class="listen-role" id="nowRole"></span></div>
+                <div class="listen-progress">
+                  <input class="listen-seek" id="seekBar" type="range" min="0" max="1000" value="0" aria-label="播放进度">
+                  <span class="listen-time"><span id="tCur">0:00</span> / <span id="tDur">0:00</span></span>
+                </div>
+              </div>
+            </div>
             <div class="speed-row">${[0.8, 0.95, 1.1].map(r => `<button class="${r === listenRate ? 'is-active' : ''}" data-rate="${r}">${r}×</button>`).join('')}</div>
           </div>
           <div class="transcript">
@@ -202,7 +245,7 @@
               <button class="btn btn--sm" id="toggleTranscript">${revealed ? '隐藏原文' : '显示原文'}</button>
             </div>
             <div id="transcriptText" style="${revealed ? '' : 'filter:blur(5px);user-select:none;cursor:pointer'}" title="${revealed ? '' : '点击显示原文'}">
-              ${cur.text.split('\n').map(l => `<p>${esc(l)}</p>`).join('')}
+              ${lineHtml}
             </div>
             <div style="font-family:var(--font-serif);font-size:.82rem;color:var(--ink-faint);margin-top:var(--sp-3);padding:var(--sp-3);background:var(--pine-wash);border-radius:var(--radius)">📌 ${esc(cur.notes)}</div>
           </div>
@@ -210,15 +253,84 @@
         <div class="sec-head"><span class="sec-head__no">§</span><h2>听写填空</h2><span class="sec-head__note">先听后写，核对答案</span></div>
         <div class="card">${blanksHtml}<div style="margin-top:var(--sp-4)"><button class="btn btn--primary" id="checkBlanks">核对答案</button></div></div>
       `;
+
+      // 依据音频真实状态同步按钮/进度/时间/台词高亮
+      const syncUI = () => {
+        const a = laAudio;
+        const playing = !!(a && !a.paused && !a.ended && laCurId === cur.id);
+        const btn = $('#playBtn');
+        if (btn) { btn.innerHTML = playing ? PAUSE_SVG : PLAY_SVG; btn.setAttribute('aria-label', playing ? '暂停' : '播放'); }
+        const dur = (a && isFinite(a.duration)) ? a.duration : 0;
+        const now = (a && laCurId === cur.id) ? a.currentTime : 0;
+        const bar = $('#seekBar');
+        if (bar) {
+          if (!seeking) bar.value = dur ? Math.round(now / dur * 1000) : 0;
+          bar.style.setProperty('--fill', (dur ? (now / dur * 100) : 0) + '%');
+        }
+        const tc = $('#tCur'), td = $('#tDur');
+        if (tc) tc.textContent = fmtTime(now);
+        if (td) td.textContent = fmtTime(dur);
+        // 当前说话角色 + 台词高亮
+        let idx = -1;
+        if (tl.length && a && laCurId === cur.id) {
+          for (let i = 0; i < tl.length; i++) { if (now >= tl[i].start - 0.06 && now <= tl[i].end + 0.06) { idx = i; break; } }
+        }
+        $$('.tl-line', root).forEach((el, i) => el.classList.toggle('is-speaking', i === idx));
+        const nr = $('#nowRole');
+        if (nr) nr.textContent = idx >= 0 ? '· ' + (tl[idx].role || '旁白') : '';
+      };
+      const tick = () => {
+        if (window.__YANBIAN__.currentView && window.__YANBIAN__.currentView() !== 'listening') { stopListenAudio(); return; }
+        syncUI();
+        if (laAudio && !laAudio.paused && !laAudio.ended) laRaf = requestAnimationFrame(tick);
+        else laRaf = 0;
+      };
+
       $$('[data-ldiff]', root).forEach(b => b.addEventListener('click', () => {
         diffFilter = b.dataset.ldiff;
         const nl = visibleList();
-        if (nl.length && !nl.includes(cur)) cur = nl[0];
+        if (nl.length && !nl.includes(cur)) { stopListenAudio(); cur = nl[0]; }
         render();
       }));
-      $$('[data-l]', root).forEach(b => b.addEventListener('click', () => { cur = DATA.listening[+b.dataset.l]; revealed = false; render(); }));
-      $('#playBtn').addEventListener('click', () => speak(cur.text.replace(/\n/g, ' '), listenRate));
-      $$('[data-rate]', root).forEach(b => b.addEventListener('click', () => { listenRate = +b.dataset.rate; render(); }));
+      $$('[data-l]', root).forEach(b => b.addEventListener('click', () => {
+        const next = DATA.listening[+b.dataset.l];
+        if (next && next.id !== cur.id) { stopListenAudio(); cur = next; }
+        revealed = false; render();
+      }));
+      $('#playBtn').addEventListener('click', () => {
+        const a = ensureListenAudio();
+        if (laCurId !== cur.id) {
+          const m = LISTEN_AUDIO()[cur.id];
+          if (m && m.file) { a.src = m.file; a.load(); laCurId = cur.id; }
+          else { // 资源缺失时回退在线朗读（不读角色名）
+            speak(tl.length ? tl.map(x => x.text).join(' ') : cur.text.replace(/\n/g, ' '), listenRate);
+            return;
+          }
+        }
+        a.playbackRate = listenRate;
+        if (a.paused) {
+          const p = a.play();
+          if (p && typeof p.catch === 'function') p.catch(() => toast('点播放键即可开始'));
+        } else a.pause();
+        if (laRaf) cancelAnimationFrame(laRaf);
+        if (!a.paused) laRaf = requestAnimationFrame(tick);
+        else syncUI();
+      });
+      const bar = $('#seekBar');
+      bar.addEventListener('input', () => {
+        seeking = true;
+        if (laAudio && laCurId === cur.id && isFinite(laAudio.duration)) laAudio.currentTime = (+bar.value / 1000) * laAudio.duration;
+        syncUI();
+      });
+      const endSeek = () => { seeking = false; syncUI(); };
+      bar.addEventListener('change', endSeek);
+      bar.addEventListener('pointerup', endSeek);
+      bar.addEventListener('touchend', endSeek);
+      $$('[data-rate]', root).forEach(b => b.addEventListener('click', () => {
+        listenRate = +b.dataset.rate;
+        if (laAudio) laAudio.playbackRate = listenRate;
+        render();
+      }));
       $('#toggleTranscript').addEventListener('click', () => { revealed = !revealed; render(); });
       const tt = $('#transcriptText');
       if (!revealed) tt.addEventListener('click', () => { revealed = true; render(); });
@@ -233,6 +345,7 @@
         });
         save(); toast(`答对 ${ok} / ${cur.blanks.length}`); render();
       });
+      syncUI();
     };
     render();
   };

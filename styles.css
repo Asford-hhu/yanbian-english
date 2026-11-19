@@ -484,10 +484,44 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   transition: transform .2s var(--ease), background .2s var(--ease);
 }
 .listen-play:hover { transform: scale(1.06); background: var(--pine-wash); }
-.listen-play svg { width: 30px; height: 30px; }
+.listen-play:active { transform: scale(.98); }
+.listen-play svg { width: 30px; height: 30px; fill: currentColor; }
 .listen-panel__hint { font-family: var(--font-serif); font-size: .82rem; color: var(--ink-faint); }
+/* 多角色配音播放器：播放/暂停 + 精准进度条 */
+.listen-toprow { display: flex; align-items: center; gap: var(--sp-5); text-align: left; }
+.listen-toprow .listen-play { margin: 0; flex: none; }
+.listen-toprow__info { flex: 1; min-width: 0; }
+.listen-role { color: var(--pine); font-weight: 600; margin-left: 8px; }
+.listen-progress { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); }
+.listen-seek {
+  -webkit-appearance: none; appearance: none; flex: 1; height: 6px; border-radius: 999px;
+  background: linear-gradient(to right, var(--pine) 0%, var(--pine) var(--fill, 0%), var(--rule) var(--fill, 0%), var(--rule) 100%);
+  outline: none; cursor: pointer; margin: 0;
+}
+.listen-seek::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--pine); border: 2px solid var(--paper); box-shadow: 0 1px 4px rgba(0,0,0,.25); cursor: pointer;
+}
+.listen-seek::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%; background: var(--pine);
+  border: 2px solid var(--paper); cursor: pointer;
+}
+.listen-time { font-family: var(--font-serif); font-size: .78rem; color: var(--ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .transcript { padding: var(--sp-5); }
 .transcript p { font-family: var(--font-serif); line-height: 1.95; margin: 0; }
+.tl-line { padding: 3px 10px; margin: 0 calc(-1 * var(--sp-2)) !important; border-radius: var(--radius); transition: background .25s ease; }
+.tl-line.is-speaking { background: var(--pine-wash); box-shadow: inset 3px 0 0 var(--pine); }
+.tl-role {
+  display: inline-block; font-family: var(--font-body); font-size: .74rem; font-weight: 600;
+  color: var(--paper); background: var(--pine); border-radius: 999px;
+  padding: 1px 9px; margin-right: 9px; vertical-align: 1px;
+}
+@media (max-width: 640px) {
+  .listen-toprow { gap: var(--sp-4); }
+  .listen-toprow .listen-play { width: 60px; height: 60px; }
+  .listen-toprow .listen-play svg { width: 24px; height: 24px; }
+  .listen-time { font-size: .72rem; }
+}
 .transcript .blank { display: inline-block; min-width: 70px; border-bottom: 1px solid var(--accent); }
 .speed-row { display: flex; align-items: center; justify-content: center; gap: var(--sp-2); margin-top: var(--sp-3); }
 .speed-row button { padding: 4px 12px; border: 1px solid var(--rule); background: var(--paper); border-radius: var(--radius); font-family: var(--font-serif); font-size: .8rem; }
