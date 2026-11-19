@@ -12,16 +12,36 @@
   const save = () => window.__YANBIAN__.save();
 
   /* ---------- 词汇：完整四六级词库（音标/英美音/词形/短语 + 语境例句） ---------- */
+  // 精讲词规范英式 IPA 音标（这16个高级词部分不在 CET 库，手工标注补齐）
+  const ADVANCED_IPA = {
+    resilient: 'rɪˈzɪliənt', nuance: 'ˈnjuːɑːns', mitigate: 'ˈmɪtɪɡeɪt',
+    ubiquitous: 'juːˈbɪkwɪtəs', scrutiny: 'ˈskruːtɪni', paradigm: 'ˈpærədaɪm',
+    catalyst: 'ˈkætəlɪst', pragmatic: 'præɡˈmætɪk', deteriorate: 'dɪˈtɪəriəreɪt',
+    inevitable: 'ɪnˈevɪtəbl', coherent: 'kəʊˈhɪərənt', exacerbate: 'ɪɡˈzæsəbeɪt',
+    prevalent: 'ˈprevələnt', ambiguous: 'æmˈbɪɡjuəs', threshold: 'ˈθreʃhəʊld',
+    contemplate: 'ˈkɒntəmpleɪt'
+  };
   // 合并原精讲词 + 完整四六级词库 + 旧1500词库，按单词去重（精讲词优先，保留其精心撰写的 tip）
   const VOCAB_ALL = (function buildVocab() {
     const seen = new Set();
     const merged = [];
+    const cetMap = {};
+    (window.YANBIAN_CET_VOCAB || []).forEach(v => { cetMap[v.word.toLowerCase()] = v; });
     const push = (v) => {
       const k = String(v.word || '').toLowerCase();
       if (!k || seen.has(k)) return;
       seen.add(k); merged.push(v);
     };
-    (DATA.vocab || []).forEach(v => push(Object.assign({ level: '精讲' }, v)));
+    (DATA.vocab || []).forEach(v => {
+      const w = String(v.word || '').toLowerCase();
+      const base = Object.assign({ level: '精讲' }, v);
+      // 用 CET 库或手工表补全精讲词的音标/词形/短语
+      const src = cetMap[w];
+      if (!base.phonetic) base.phonetic = ADVANCED_IPA[w] || (src && src.phonetic) || '';
+      if (!base.forms && src) base.forms = src.forms;
+      if (!base.phrases && src) base.phrases = src.phrases;
+      push(base);
+    });
     (window.YANBIAN_CET_VOCAB || []).forEach(v => push(v));
     (window.YANBIAN_VOCAB_1500 || []).forEach(v => push(v));
     return merged;
@@ -79,8 +99,13 @@
       const slice = list.slice(0, shown);
       const cards = slice.length ? slice.map(cardHtml).join('')
         : `<div class="empty"><span class="empty__mark">∅</span><p>${filter === 'saved' ? '生词本还是空的，遇到好词点「+ 生词本」吧。' : '没有找到匹配的词，换个关键词试试。'}</p></div>`;
+      // 微信内存有限：单次最多展开 120 条，避免 DOM 无限堆积导致卡顿/闪退
+      const MAX_SHOWN = 120;
       const moreBtn = list.length > shown
-        ? `<div class="load-more"><button class="btn btn--outline" id="vocab-more">加载更多 · 还有 ${(list.length - shown)} 个</button></div>` : '';
+        ? (shown < MAX_SHOWN
+            ? `<div class="load-more"><button class="btn btn--outline" id="vocab-more">加载更多 · 还有 ${(list.length - shown)} 个</button><span style="font-family:var(--font-serif);font-size:.74rem;color:var(--ink-faint);margin-left:10px">建议用上方搜索精确查找</span></div>`
+            : `<div class="load-more"><span style="font-family:var(--font-serif);font-size:.8rem;color:var(--ink-faint)">已显示前 ${shown} 个，共 ${list.length} 个 · 请用搜索框精确定位（微信下限制展开数量以保证流畅）</span></div>`)
+        : '';
       const chips = [['all', '全部'], ['saved', '生词本'], ['四级', '四级'], ['六级', '六级'], ['精讲', '精讲']]
         .map(([k, label]) => {
           let n = VOCAB_ALL.length;
@@ -104,7 +129,7 @@
         if (keepFocus) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
       }
       const more = $('#vocab-more', root);
-      if (more) more.addEventListener('click', () => { shown += PAGE; render(); });
+      if (more) more.addEventListener('click', () => { shown = Math.min(shown + PAGE, MAX_SHOWN); render(); });
       $$('[data-speak]', root).forEach(b => b.addEventListener('click', () => speak(b.dataset.speak)));
       $$('.pron-btn', root).forEach(b => b.addEventListener('click', () => speakWord(b.dataset.word, b.dataset.accent)));
       $$('[data-save]', root).forEach(b => b.addEventListener('click', () => {

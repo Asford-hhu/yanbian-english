@@ -535,9 +535,6 @@
             <div class="passage__title">${esc(art.title)}</div>
             ${art.body.map(p => `<p>${esc(p)}</p>`).join('')}
           </div>
-          <div style="margin-top:var(--sp-4);text-align:right">
-            <button class="speak-btn" data-speak="${esc(art.body.join(' '))}"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a4 4 0 0 1 0 6"/></svg>朗读全文</button>
-          </div>
         </div>
         <div class="sec-head"><span class="sec-head__no">§</span><h2>理解题</h2><span class="sec-head__note">${art.questions.length} 小题</span></div>
         <div class="card" id="readingQs">${qs}</div>
@@ -555,7 +552,6 @@
         if (!correct) addMistake({ id: key, src: '阅读 · ' + art.title, q: q.q, opts: q.opts, answer: q.answer, chosen: oi, why: q.why });
         save(); renderArticle(); toast(correct ? '正确' : '已收入错题本');
       }));
-      $('[data-speak]', $('#readingContent'))?.addEventListener('click', e => speak(e.currentTarget.dataset.speak));
     };
     $('#readingSelect').addEventListener('change', e => { readingState.id = e.target.value; readingState.answered = {}; renderArticle(); });
     renderArticle();
