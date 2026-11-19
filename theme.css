@@ -161,3 +161,59 @@ input, select, textarea {
   outline-offset: 2px;
   border-radius: var(--radius);
 }
+
+/* ===== 词汇：音标 / 英美发音 / 词形 / 短语 ===== */
+.word-card__head { display:flex; justify-content:space-between; align-items:flex-start; gap:var(--sp-3); flex-wrap:wrap; }
+.word-card__phonetic { font-family:var(--font-serif); color:var(--ink-faint); font-size:.95rem; margin-left:var(--sp-2); }
+.word-card__pron { display:flex; gap:6px; flex-shrink:0; }
+.pron-btn {
+  font-family:var(--font-serif); font-size:.76rem; line-height:1; padding:6px 10px;
+  border:1px solid var(--accent); color:var(--accent); background:transparent;
+  border-radius:999px; cursor:pointer; white-space:nowrap;
+}
+.pron-btn:hover, .pron-btn:active { background:var(--accent); color:#fff; }
+.word-card__extra {
+  font-family:var(--font-serif); font-size:.84rem; line-height:1.7; color:var(--ink-soft);
+  margin-top:var(--sp-2);
+}
+.word-card__extra b { color:var(--accent); font-weight:600; margin-right:4px; }
+.word-card__extra i { font-style:italic; color:var(--ink); }
+
+/* ===== 音乐卡片 ===== */
+.music-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:var(--sp-3); }
+.music-card {
+  border:1px solid var(--rule); border-radius:var(--radius); overflow:hidden;
+  background:var(--paper); transition:transform .15s, box-shadow .15s;
+}
+.music-card:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(30,60,110,.12); }
+.music-card__cover { width:100%; aspect-ratio:1; object-fit:cover; display:block; background:var(--pine-wash); }
+.music-card__body { padding:10px 12px 12px; }
+.music-card__title { font-family:var(--font-serif); font-weight:600; font-size:.95rem; line-height:1.35; }
+.music-card__artist { font-family:var(--font-serif); color:var(--ink-faint); font-size:.8rem; margin-top:2px; }
+.music-card__foot { display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:6px; }
+.music-card__play {
+  border:0; border-radius:999px; background:var(--accent); color:#fff;
+  font-family:var(--font-serif); font-size:.78rem; padding:5px 12px; cursor:pointer;
+}
+.music-card__play:hover { filter:brightness(1.08); }
+.music-player-bar {
+  position:sticky; bottom:12px; z-index:50; margin-top:var(--sp-4);
+  background:var(--paper); border:1px solid var(--accent); border-radius:var(--radius);
+  box-shadow:0 10px 30px rgba(30,60,110,.18); padding:10px 14px;
+}
+.music-player-bar iframe { width:100%; height:66px; border:0; display:block; }
+
+/* ===== 外刊新闻卡片 ===== */
+.news-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:var(--sp-4); }
+.news-card {
+  border:1px solid var(--rule); border-radius:var(--radius); overflow:hidden;
+  background:var(--paper); display:flex; flex-direction:column;
+}
+.news-card__img { width:100%; height:150px; object-fit:cover; background:var(--pine-wash); display:block; }
+.news-card__body { padding:14px; display:flex; flex-direction:column; gap:8px; flex:1; }
+.news-card__src { font-family:var(--font-serif); font-size:.74rem; color:var(--accent); letter-spacing:.04em; }
+.news-card__title { font-family:var(--font-serif); font-weight:600; font-size:1rem; line-height:1.45; }
+.news-card__desc { font-family:var(--font-serif); font-size:.84rem; color:var(--ink-soft); line-height:1.6; }
+.news-card__meta { margin-top:auto; font-family:var(--font-serif); font-size:.74rem; color:var(--ink-faint); display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.news-card__link { color:var(--accent); text-decoration:none; font-weight:600; }
+.news-card__link:hover { text-decoration:underline; }

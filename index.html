@@ -34,15 +34,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="砚边">
-<link rel="manifest" href="manifest.webmanifest?v=20261118f">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=20261118f">
-<link rel="apple-touch-icon" href="icon-192.png?v=20261118f">
+<link rel="manifest" href="manifest.webmanifest?v=20261119a">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=20261119a">
+<link rel="apple-touch-icon" href="icon-192.png?v=20261119a">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=DM+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261118f">
-<link rel="stylesheet" href="theme.css?v=20261118f">
+<link rel="stylesheet" href="styles.css?v=20261119a">
+<link rel="stylesheet" href="theme.css?v=20261119a">
 </head>
 <body>
 
@@ -108,6 +108,18 @@
         <span>资源</span>
       </button>
     </div>
+
+    <div class="nav-group">
+      <span class="nav-group__label">拓展</span>
+      <button class="nav-item" data-view="music">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span>英文音乐</span>
+      </button>
+      <button class="nav-item" data-view="news">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+        <span>外刊速览</span>
+      </button>
+    </div>
   </nav>
 
   <div class="spine__foot">
@@ -148,7 +160,7 @@
       <span class="margin-mark" id="marginMark">序</span>
       <div>
         <h1 id="viewTitle">今日概览</h1>
-        <p class="lede" id="viewLede">把每一天，写成看得见的进步。</p>
+        <p class="lede" id="viewLede">砚边与你同在，English 重塑未来。</p>
       </div>
     </div>
     <div class="ink-line" aria-hidden="true"></div>
@@ -165,6 +177,8 @@
   <section class="view" id="view-mock" data-view="mock"></section>
   <section class="view" id="view-stats" data-view="stats"></section>
   <section class="view" id="view-resources" data-view="resources"></section>
+  <section class="view" id="view-music" data-view="music"></section>
+  <section class="view" id="view-news" data-view="news"></section>
 
   <footer class="page-foot">
     <span>砚边 · 一个人的英语备考手记</span>
@@ -191,12 +205,16 @@
 <!-- 全局提示 -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="data.js?v=20261118f"></script>
-<script src="vocab-data.js?v=20261118f"></script>
-<script src="reading-extra.js?v=20261118f"></script>
-<script src="writing-extra.js?v=20261118f"></script>
-<script src="listening-extra.js?v=20261118f"></script>
-<script src="app.js?v=20261118f"></script>
-<script src="app2.js?v=20261118f"></script>
+<script src="data.js?v=20261119a"></script>
+<script src="vocab-data.js?v=20261119a"></script>
+<script src="vocab-cet.js?v=20261119a"></script>
+<script src="reading-extra.js?v=20261119a"></script>
+<script src="writing-extra.js?v=20261119a"></script>
+<script src="listening-extra.js?v=20261119a"></script>
+<script src="music-data.js?v=20261119a"></script>
+<script src="app.js?v=20261119a"></script>
+<script src="app2.js?v=20261119a"></script>
+<script src="music-view.js?v=20261119a"></script>
+<script src="news-view.js?v=20261119a"></script>
 </body>
 </html>

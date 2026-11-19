@@ -285,6 +285,33 @@
     playSeg();
   }
 
+  // 单词发音：美音(type=1) / 英音(type=2)，走有道 dictvoice（微信实测可用，无防盗链）。
+  // 复用已挂载的可见播放器与手势解锁，保证手机微信和网页都能出声。
+  function speakWord(word, accent) {
+    if (!word) return;
+    stopSpeak();
+    const seq = ttsSeq;
+    unlockAudio();
+    const inApp = isInAppBrowser();
+    let a;
+    try { a = ensureAudio(true); } catch (e) { a = new Audio(); }
+    if (!a) return;
+    const type = accent === 'uk' ? '2' : '1';
+    const url = 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(String(word).trim()) + '&type=' + type;
+    let finished = false;
+    a.onended = () => { finished = true; };
+    a.onerror = () => {
+      if (finished || seq !== ttsSeq) return;
+      finished = true;
+      revealPlayer('发音加载失败，请点播放键 ▶ 重试');
+    };
+    try { a.src = url; a.load(); } catch (e) {}
+    try {
+      const p = a.play();
+      if (p && typeof p.catch === 'function') p.catch(() => { revealPlayer('请点下方播放键 ▶ 听发音'); });
+    } catch (e) { revealPlayer('请点下方播放键 ▶ 听发音'); }
+  }
+
   /* ---------- 3. 主题 ---------- */
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', S.theme);
@@ -297,7 +324,7 @@
 
   /* ---------- 4. 路由 ---------- */
   const VIEW_META = {
-    dashboard: { title: '今日概览', mark: '序', lede: '把每一天，写成看得见的进步。', folio: 'FOLIO 01' },
+    dashboard: { title: '今日概览', mark: '序', lede: '砚边与你同在，English 重塑未来。', folio: 'FOLIO 01' },
     study:     { title: '研习路径', mark: '壹', lede: '四步功课，从输入到输出，稳稳地把水平提上去。', folio: 'FOLIO 02' },
     reading:   { title: '阅读', mark: '贰', lede: '精读一篇，胜过泛读十篇。', folio: 'FOLIO 03' },
     writing:   { title: '写作表达库', mark: '叁', lede: '积累有质感的高级表达，而非套路模板。', folio: 'FOLIO 04' },
@@ -306,6 +333,8 @@
     mistakes:  { title: '错题本', mark: '陆', lede: '错过的题，是最值钱的提分线索。', folio: 'FOLIO 07' },
     mock:      { title: '模考计时', mark: '柒', lede: '在时间里练习，才能在考场上从容。', folio: 'FOLIO 08' },
     stats:     { title: '学习进度', mark: '捌', lede: '看得见的进步，才撑得起长期的坚持。', folio: 'FOLIO 09' },
+    music:     { title: '英文音乐', mark: '拾', lede: '听歌磨耳朵，让语感在旋律里慢慢长出来。', folio: 'FOLIO 11' },
+    news:      { title: '外刊速览', mark: '拾壹', lede: '每天读一点真实世界的新闻，把英语读成窗口。', folio: 'FOLIO 12' },
     resources: { title: '资源导航', mark: '玖', lede: '站在优质资源的肩上，少走弯路。', folio: 'FOLIO 10' }
   };
   let currentView = 'dashboard';
@@ -369,7 +398,7 @@
         <div class="hero-card__row">
           <div class="hero-card__lead">
             <div class="hero-card__eyebrow">The Road Ahead</div>
-            <div class="hero-card__big">稳过四六级，冲刺<em>大英赛省奖</em></div>
+            <div class="hero-card__big">稳过四六级，冲刺<em>大英赛</em></div>
             <p class="hero-card__desc">从这里开始，把英语读成自己的书。按「研习路径」一步一步走，水平会像日记一样，一天天积累成册。</p>
           </div>
           <div class="countdown">
@@ -427,7 +456,8 @@
     root.innerHTML = `
       <div class="card" style="margin-bottom:var(--sp-5)">
         <div class="card__label">A Note to Myself</div>
-        <p style="font-family:var(--font-serif);margin:0;color:var(--ink-soft)">你不是英语专业的，但你有清楚的目标：先把整体水平提到<b>“211 英语程度”</b>，再稳稳地过四六级、冲大英赛省奖。这条路不靠天赋，靠的是每天看得见的一点积累。下面的四步功课，按顺序走，别着急。</p>
+        <p style="font-family:var(--font-display);font-size:1.15rem;line-height:1.9;margin:0;color:var(--ink);text-align:center">我不能改变风的方向，但我可以调整我的帆，以永远到达我的目的地。</p>
+        <p style="font-family:var(--font-serif);font-size:.9rem;line-height:1.7;margin:var(--sp-3) 0 0;color:var(--ink-faint);text-align:center;font-style:italic">I cannot change the direction of the wind, but I can adjust my sails to always reach my destination.</p>
       </div>
       <div class="sec-head"><span class="sec-head__no">§</span><h2>四步功课</h2><span class="sec-head__note">输入 → 输出 → 巩固</span></div>
       <div class="card" style="padding:0;overflow:hidden">
@@ -444,20 +474,41 @@
   };
 
   /* ---------- 8. 阅读 ---------- */
-  let readingState = { id: 'r1', answered: {} };
+  let readingState = { id: 'r1', answered: {}, level: '全部' };
   RENDERERS.reading = function () {
     const root = $('#view-reading');
-    const opts = DATA.reading.map((a, i) => `<option value="${a.id}" ${a.id === readingState.id ? 'selected' : ''}>${a.title} · ${a.level}</option>`).join('');
+    const levels = ['全部', '四级', '六级', '大英赛'];
+    const levelChips = levels.map(l => `<button class="filter-chip ${l === readingState.level ? 'is-active' : ''}" data-rlevel="${l}">${l}</button>`).join('');
+    const filtered = () => readingState.level === '全部' ? DATA.reading : DATA.reading.filter(a => a.level === readingState.level);
+    const renderSelect = () => {
+      const list = filtered();
+      if (list.length && !list.some(a => a.id === readingState.id)) readingState.id = list[0].id;
+      const opts = list.map(a => `<option value="${a.id}" ${a.id === readingState.id ? 'selected' : ''}>${esc(a.title)} · ${a.level}</option>`).join('');
+      const sel = $('#readingSelect');
+      if (sel) sel.innerHTML = opts || '<option value="">该分类暂无文章</option>';
+      const cnt = $('#readingCount'); if (cnt) cnt.textContent = '共 ' + list.length + ' 篇';
+    };
+    const opts = filtered().map(a => `<option value="${a.id}" ${a.id === readingState.id ? 'selected' : ''}>${esc(a.title)} · ${a.level}</option>`).join('');
     root.innerHTML = `
+      <div class="filter-bar">
+        <span style="font-family:var(--font-serif);font-size:.9rem;color:var(--ink-soft)">按类别查找：</span>
+        ${levelChips}
+      </div>
       <div class="filter-bar">
         <label style="font-family:var(--font-serif);font-size:.9rem;color:var(--ink-soft)">选一篇文章：</label>
         <select id="readingSelect">${opts}</select>
-        <span class="tag">答对会存入进度</span>
+        <span class="tag" id="readingCount">共 ${filtered().length} 篇</span>
       </div>
       <div id="readingContent"></div>
     `;
+    $$('[data-rlevel]', root).forEach(b => b.addEventListener('click', () => {
+      readingState.level = b.dataset.rlevel;
+      $$('[data-rlevel]', root).forEach(x => x.classList.toggle('is-active', x === b));
+      renderSelect(); renderArticle();
+    }));
     const renderArticle = () => {
       const art = DATA.reading.find(a => a.id === readingState.id);
+      if (!art) { $('#readingContent').innerHTML = '<div class="empty"><span class="empty__mark">∅</span><p>该类别暂无文章，换个类别看看。</p></div>'; return; }
       const key = (qi) => `${art.id}-${qi}`;
       const qs = art.questions.map((q, qi) => {
         const rec = S.practice.reading[key(qi)];
@@ -565,7 +616,7 @@
   };
 
   /* ---------- 注册其余渲染器（见 app2 追加） ---------- */
-  window.__YANBIAN__ = { $, $$, esc, getS: () => S, save, toast, speak, addMistake, RENDERERS, navigate, streak, DATA, applyTheme, initVoices, updateChrome, currentView: () => currentView };
+  window.__YANBIAN__ = { $, $$, esc, getS: () => S, save, toast, speak, speakWord, addMistake, RENDERERS, navigate, streak, DATA, applyTheme, initVoices, updateChrome, currentView: () => currentView };
 
   /* ---------- 10. 启动 ---------- */
   function init() {
@@ -590,6 +641,9 @@
     $('#resetBtn').addEventListener('click', resetData);
     // 注册后半模块渲染器（app2.js）
     if (window.__registerLateRenderers) window.__registerLateRenderers();
+    // 注册独立模块渲染器（音乐 / 外刊新闻）
+    if (window.__registerMusicView) window.__registerMusicView();
+    if (window.__registerNewsView) window.__registerNewsView();
     navigate(S.lastView || 'dashboard', false);
   }
 

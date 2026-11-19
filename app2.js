@@ -6,19 +6,24 @@
 
 (function registerLateRenderers() {
   'use strict';
-  const { $, $$, esc, DATA, toast, speak, addMistake, navigate } = window.__YANBIAN__;
+  const { $, $$, esc, DATA, toast, speak, speakWord, addMistake, navigate } = window.__YANBIAN__;
   const R = window.__YANBIAN__.RENDERERS;
   const getS = () => window.__YANBIAN__.getS();
   const save = () => window.__YANBIAN__.save();
 
-  /* ---------- 词汇：语境记忆（1500+ 词，支持搜索/筛选/分页） ---------- */
-  // 合并原精讲词 + 扩展词库，按单词去重（精讲词优先，保留其精心撰写的 tip）
+  /* ---------- 词汇：完整四六级词库（音标/英美音/词形/短语 + 语境例句） ---------- */
+  // 合并原精讲词 + 完整四六级词库 + 旧1500词库，按单词去重（精讲词优先，保留其精心撰写的 tip）
   const VOCAB_ALL = (function buildVocab() {
-    const base = (DATA.vocab || []).map(v => Object.assign({ level: '精讲' }, v));
-    const extra = window.YANBIAN_VOCAB_1500 || [];
-    const seen = new Set(base.map(v => v.word.toLowerCase()));
-    const merged = base.slice();
-    extra.forEach(v => { if (!seen.has(v.word.toLowerCase())) { seen.add(v.word.toLowerCase()); merged.push(v); } });
+    const seen = new Set();
+    const merged = [];
+    const push = (v) => {
+      const k = String(v.word || '').toLowerCase();
+      if (!k || seen.has(k)) return;
+      seen.add(k); merged.push(v);
+    };
+    (DATA.vocab || []).forEach(v => push(Object.assign({ level: '精讲' }, v)));
+    (window.YANBIAN_CET_VOCAB || []).forEach(v => push(v));
+    (window.YANBIAN_VOCAB_1500 || []).forEach(v => push(v));
     return merged;
   })();
 
@@ -40,18 +45,31 @@
       });
     };
 
-    const cardHtml = (v, idx) => {
+    const cardHtml = (v) => {
       const saved = S.vocabSaved.includes(v.word);
       const lvl = v.level === '精讲' ? '<span class="tag tag--accent">精讲</span>'
-        : v.level === '六级' ? '<span class="tag tag--pine">六级</span>' : '';
-      return `<div class="card card--hover word-card" data-i="${idx}">
-        <div><span class="word-card__word">${esc(v.word)}</span>${v.pos ? `<span class="word-card__pos">${esc(v.pos)}</span>` : ''}${lvl}</div>
-        <p class="word-card__sentence">${highlightWord(v.sentence, v.word)}</p>
+        : v.level === '六级' ? '<span class="tag tag--pine">六级</span>'
+        : v.level === '四级' ? '<span class="tag">四级</span>' : '';
+      const phonetic = v.phonetic ? `<span class="word-card__phonetic">/${esc(v.phonetic)}/</span>` : '';
+      const forms = (v.forms && v.forms.length)
+        ? `<div class="word-card__extra"><b>词形</b> ${v.forms.map(f => `${esc(f.label)} <i>${esc(f.word)}</i>`).join(' · ')}</div>` : '';
+      const phrases = (v.phrases && v.phrases.length)
+        ? `<div class="word-card__extra"><b>短语</b> ${v.phrases.map(p => `${esc(p.en)}（${esc(p.zh)}）`).join('；')}</div>` : '';
+      const sentence = v.sentence ? `<p class="word-card__sentence">${highlightWord(v.sentence, v.word)}</p>` : '';
+      const tip = v.tip ? `<div style="font-family:var(--font-serif);font-size:.8rem;color:var(--ink-faint);margin-top:var(--sp-2)">✎ ${esc(v.tip)}</div>` : '';
+      return `<div class="card card--hover word-card">
+        <div class="word-card__head">
+          <div><span class="word-card__word">${esc(v.word)}</span>${phonetic}${v.pos ? `<span class="word-card__pos">${esc(v.pos)}</span>` : ''}${lvl}</div>
+          <div class="word-card__pron">
+            <button class="pron-btn" data-word="${esc(v.word)}" data-accent="us" title="美音">美 ▶</button>
+            <button class="pron-btn" data-word="${esc(v.word)}" data-accent="uk" title="英音">英 ▶</button>
+          </div>
+        </div>
         <div class="word-card__meaning">释义：${esc(v.meaning)}</div>
-        <div style="font-family:var(--font-serif);font-size:.8rem;color:var(--ink-faint);margin-top:var(--sp-2)">✎ ${esc(v.tip)}</div>
+        ${forms}${phrases}${sentence}${tip}
         <div class="word-card__actions">
-          <button class="speak-btn" data-speak="${esc(v.sentence)}"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a4 4 0 0 1 0 6"/></svg>读句子</button>
-          <button class="btn btn--sm ${saved ? 'btn--pine' : ''}" data-save="${esc(v.word)}">${saved ? '✓ 已在生词本' : '+ 加入生词本'}</button>
+          ${v.sentence ? `<button class="speak-btn" data-speak="${esc(v.sentence)}"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a4 4 0 0 1 0 6"/></svg>读例句</button>` : ''}
+          <button class="btn btn--sm ${saved ? 'btn--pine' : ''}" data-save="${esc(v.word)}">${saved ? '✓ 已在生词本' : '+ 生词本'}</button>
         </div>
       </div>`;
     };
@@ -59,8 +77,8 @@
     const render = (keepFocus) => {
       const list = matches();
       const slice = list.slice(0, shown);
-      const cards = slice.length ? slice.map((v, i) => cardHtml(v, i)).join('')
-        : `<div class="empty"><span class="empty__mark">∅</span><p>${filter === 'saved' ? '生词本还是空的，遇到好词点「加入生词本」吧。' : '没有找到匹配的词，换个关键词试试。'}</p></div>`;
+      const cards = slice.length ? slice.map(cardHtml).join('')
+        : `<div class="empty"><span class="empty__mark">∅</span><p>${filter === 'saved' ? '生词本还是空的，遇到好词点「+ 生词本」吧。' : '没有找到匹配的词，换个关键词试试。'}</p></div>`;
       const moreBtn = list.length > shown
         ? `<div class="load-more"><button class="btn btn--outline" id="vocab-more">加载更多 · 还有 ${(list.length - shown)} 个</button></div>` : '';
       const chips = [['all', '全部'], ['saved', '生词本'], ['四级', '四级'], ['六级', '六级'], ['精讲', '精讲']]
@@ -68,15 +86,12 @@
           let n = VOCAB_ALL.length;
           if (k === 'saved') n = S.vocabSaved.length;
           else if (k !== 'all') n = VOCAB_ALL.filter(v => v.level === k).length;
-          return `<button class="filter-chip ${filter === k ? 'is-active' : ''}" data-fav="${k}">${label} (${n})</button>`;
+          return `<button class="filter-chip ${filter === k ? 'is-active' : ''}" data-fav="${k}">${label}${n ? ' (' + n + ')' : ''}</button>`;
         }).join('');
       root.innerHTML = `
-        <div class="filter-bar">
-          ${chips}
-          <span class="tag tag--pine">语境记忆 · 拒绝孤立背词</span>
-        </div>
+        <div class="filter-bar">${chips}</div>
         <div class="vocab-search">
-          <input type="search" id="vocab-q" placeholder="搜单词、释义或例句…" value="${esc(query)}" autocomplete="off">
+          <input type="search" id="vocab-q" placeholder="搜单词、释义…共 ${VOCAB_ALL.length} 词" value="${esc(query)}" autocomplete="off">
           <span class="vocab-count">找到 ${list.length} 个词</span>
         </div>
         <div class="grid grid--2">${cards}</div>
@@ -91,6 +106,7 @@
       const more = $('#vocab-more', root);
       if (more) more.addEventListener('click', () => { shown += PAGE; render(); });
       $$('[data-speak]', root).forEach(b => b.addEventListener('click', () => speak(b.dataset.speak)));
+      $$('.pron-btn', root).forEach(b => b.addEventListener('click', () => speakWord(b.dataset.word, b.dataset.accent)));
       $$('[data-save]', root).forEach(b => b.addEventListener('click', () => {
         const w = b.dataset.save;
         if (S.vocabSaved.includes(w)) { S.vocabSaved = S.vocabSaved.filter(x => x !== w); toast('已从生词本移除'); }
@@ -106,14 +122,28 @@
     return esc(sentence).replace(re, '<span class="hl">$1</span>');
   }
 
-  /* ---------- 听说训练 ---------- */
+  /* ---------- 听说训练（按难/中/易分类） ---------- */
   let listenRate = 0.95;
+  // 难度映射：结合场景与文本长度人工分级
+  const LISTEN_DIFF = {
+    l1:'易',l2:'中',l3:'易',l4:'中',l5:'中',l6:'难',l7:'中',l8:'易',
+    l9:'易',l10:'易',l11:'中',l12:'易',l13:'易',l14:'中',l15:'难',
+    l16:'中',l17:'易',l18:'中',l19:'中',l20:'中',l21:'中',l22:'中',l23:'难'
+  };
+  const getDiff = (l) => LISTEN_DIFF[l.id] || (l.text.length > 480 ? '难' : l.text.length > 420 ? '中' : '易');
+  const DIFF_CLS = { '易':'tag--pine', '中':'tag', '难':'tag--accent' };
+
   R.listening = function () {
     const root = $('#view-listening');
     const S = getS();
+    let diffFilter = '全部';
+    const visibleList = () => diffFilter === '全部' ? DATA.listening : DATA.listening.filter(l => getDiff(l) === diffFilter);
     let cur = DATA.listening[0];
     let revealed = false;
     const render = () => {
+      const list = visibleList();
+      if (list.length && !list.includes(cur)) cur = list[0];
+      const diffChips = ['全部','易','中','难'].map(d => `<button class="filter-chip ${d === diffFilter ? 'is-active' : ''}" data-ldiff="${d}">${d === '全部' ? '全部' : d}</button>`).join('');
       const blanksHtml = cur.blanks.map((b, i) => {
         const key = `${cur.id}-b${i}`;
         const val = S.practice.listening[key]?.chosen || '';
@@ -128,12 +158,17 @@
       }).join('');
       root.innerHTML = `
         <div class="filter-bar">
-          ${DATA.listening.map((l, i) => `<button class="filter-chip ${l.id === cur.id ? 'is-active' : ''}" data-l="${i}">${l.title}</button>`).join('')}
+          <span style="font-family:var(--font-serif);font-size:.9rem;color:var(--ink-soft)">按难度查找：</span>
+          ${diffChips}
+          <span class="tag tag--pine">共 ${list.length} 篇</span>
+        </div>
+        <div class="filter-bar">
+          ${list.map(l => `<button class="filter-chip ${l.id === cur.id ? 'is-active' : ''}" data-l="${DATA.listening.indexOf(l)}"><span class="tag ${DIFF_CLS[getDiff(l)]}" style="margin-right:5px;padding:1px 6px;font-size:.7rem">${getDiff(l)}</span>${esc(l.title)}</button>`).join('')}
         </div>
         <div class="listen-panel">
           <div class="listen-panel__top">
             <button class="listen-play" id="playBtn" aria-label="播放"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg></button>
-            <div class="listen-panel__hint">${esc(cur.level)} · 点击播放，可反复听；速速调至 0.8× 练辨音</div>
+            <div class="listen-panel__hint"><span class="tag ${DIFF_CLS[getDiff(cur)]}" style="padding:1px 7px;font-size:.72rem;margin-right:6px">${getDiff(cur)}</span>${esc(cur.level)} · 点击播放，可反复听；速速调至 0.8× 练辨音</div>
             <div class="speed-row">${[0.8, 0.95, 1.1].map(r => `<button class="${r === listenRate ? 'is-active' : ''}" data-rate="${r}">${r}×</button>`).join('')}</div>
           </div>
           <div class="transcript">
@@ -150,6 +185,12 @@
         <div class="sec-head"><span class="sec-head__no">§</span><h2>听写填空</h2><span class="sec-head__note">先听后写，核对答案</span></div>
         <div class="card">${blanksHtml}<div style="margin-top:var(--sp-4)"><button class="btn btn--primary" id="checkBlanks">核对答案</button></div></div>
       `;
+      $$('[data-ldiff]', root).forEach(b => b.addEventListener('click', () => {
+        diffFilter = b.dataset.ldiff;
+        const nl = visibleList();
+        if (nl.length && !nl.includes(cur)) cur = nl[0];
+        render();
+      }));
       $$('[data-l]', root).forEach(b => b.addEventListener('click', () => { cur = DATA.listening[+b.dataset.l]; revealed = false; render(); }));
       $('#playBtn').addEventListener('click', () => speak(cur.text.replace(/\n/g, ' '), listenRate));
       $$('[data-rate]', root).forEach(b => b.addEventListener('click', () => { listenRate = +b.dataset.rate; render(); }));
@@ -177,7 +218,7 @@
     const S = getS();
     if (!S.mistakes.length) {
       root.innerHTML = `<div class="empty"><span class="empty__mark">✎</span><p>错题本还是空的。去做几道题，答错的会自动收进来。</p><div style="margin-top:var(--sp-4)"><button class="btn btn--primary" data-go="reading">去阅读练习</button></div></div>`;
-      $('[data-go]', root).addEventListener('click', () => navigate('reading'));
+      $('[data-go]', root)?.addEventListener('click', () => navigate('reading'));
       return;
     }
     root.innerHTML = `
