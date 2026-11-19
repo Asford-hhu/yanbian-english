@@ -11,64 +11,62 @@
   const getS = () => window.__YANBIAN__.getS();
   const save = () => window.__YANBIAN__.save();
 
-  /* ---------- 词汇：完整四六级词库（音标/英美音/词形/短语 + 语境例句） ---------- */
-  // 精讲词规范英式 IPA 音标（这16个高级词部分不在 CET 库，手工标注补齐）
-  const ADVANCED_IPA = {
-    resilient: 'rɪˈzɪliənt', nuance: 'ˈnjuːɑːns', mitigate: 'ˈmɪtɪɡeɪt',
-    ubiquitous: 'juːˈbɪkwɪtəs', scrutiny: 'ˈskruːtɪni', paradigm: 'ˈpærədaɪm',
-    catalyst: 'ˈkætəlɪst', pragmatic: 'præɡˈmætɪk', deteriorate: 'dɪˈtɪəriəreɪt',
-    inevitable: 'ɪnˈevɪtəbl', coherent: 'kəʊˈhɪərənt', exacerbate: 'ɪɡˈzæsəbeɪt',
-    prevalent: 'ˈprevələnt', ambiguous: 'æmˈbɪɡjuəs', threshold: 'ˈθreʃhəʊld',
-    contemplate: 'ˈkɒntəmpleɪt'
-  };
-  // 合并原精讲词 + 完整四六级词库 + 旧1500词库，按单词去重（精讲词优先，保留其精心撰写的 tip）
+  /* ---------- 词汇：四六级词库（音标/英美音/词形/短语 + 随机刷新 + 已记背次数） ---------- */
+  // 合并完整四六级词库 + 旧1500词库，按单词去重（已移除精讲模块）
   const VOCAB_ALL = (function buildVocab() {
     const seen = new Set();
     const merged = [];
-    const cetMap = {};
-    (window.YANBIAN_CET_VOCAB || []).forEach(v => { cetMap[v.word.toLowerCase()] = v; });
     const push = (v) => {
       const k = String(v.word || '').toLowerCase();
       if (!k || seen.has(k)) return;
       seen.add(k); merged.push(v);
     };
-    (DATA.vocab || []).forEach(v => {
-      const w = String(v.word || '').toLowerCase();
-      const base = Object.assign({ level: '精讲' }, v);
-      // 用 CET 库或手工表补全精讲词的音标/词形/短语
-      const src = cetMap[w];
-      if (!base.phonetic) base.phonetic = ADVANCED_IPA[w] || (src && src.phonetic) || '';
-      if (!base.forms && src) base.forms = src.forms;
-      if (!base.phrases && src) base.phrases = src.phrases;
-      push(base);
-    });
     (window.YANBIAN_CET_VOCAB || []).forEach(v => push(v));
     (window.YANBIAN_VOCAB_1500 || []).forEach(v => push(v));
     return merged;
   })();
+  // Fisher-Yates 洗牌：每次进入词汇模块换一批顺序，方便日积月累不同的词
+  const shuffleWords = (arr) => {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
 
   R.vocab = function () {
     const root = $('#view-vocab');
     const S = getS();
+    if (!S.vocabMarked || typeof S.vocabMarked !== 'object' || Array.isArray(S.vocabMarked)) S.vocabMarked = {};
     const PAGE = 24;
-    let filter = 'all';       // all | saved | 四级 | 六级 | 精讲
+    const MAX_SHOWN = 120;
+    let filter = 'all';       // all | marked | saved | 四级 | 六级
     let query = '';
     let shown = PAGE;
+    let pool = shuffleWords(VOCAB_ALL);   // 进入模块先随机打乱，点「换一批」重新打乱
+
+    const markedTimes = (w) => S.vocabMarked[w] || 0;
+    const markedWordCount = () => Object.keys(S.vocabMarked).filter(w => S.vocabMarked[w] > 0).length;
+    const totalMarkTimes = () => Object.keys(S.vocabMarked).reduce((n, w) => n + (S.vocabMarked[w] > 0 ? S.vocabMarked[w] : 0), 0);
 
     const matches = () => {
       const q = query.trim().toLowerCase();
-      return VOCAB_ALL.filter(v => {
+      let list = pool.filter(v => {
+        if (filter === 'marked' && !markedTimes(v.word)) return false;
         if (filter === 'saved' && !S.vocabSaved.includes(v.word)) return false;
-        if ((filter === '四级' || filter === '六级' || filter === '精讲') && v.level !== filter) return false;
+        if ((filter === '四级' || filter === '六级') && v.level !== filter) return false;
         if (q && !(v.word.toLowerCase().includes(q) || (v.meaning || '').includes(q) || (v.sentence || '').toLowerCase().includes(q))) return false;
         return true;
       });
+      if (filter === 'marked') list = list.slice().sort((a, b) => markedTimes(b.word) - markedTimes(a.word));
+      return list;
     };
 
     const cardHtml = (v) => {
       const saved = S.vocabSaved.includes(v.word);
-      const lvl = v.level === '精讲' ? '<span class="tag tag--accent">精讲</span>'
-        : v.level === '六级' ? '<span class="tag tag--pine">六级</span>'
+      const times = markedTimes(v.word);
+      const lvl = v.level === '六级' ? '<span class="tag tag--pine">六级</span>'
         : v.level === '四级' ? '<span class="tag">四级</span>' : '';
       const phonetic = v.phonetic ? `<span class="word-card__phonetic">/${esc(v.phonetic)}/</span>` : '';
       const forms = (v.forms && v.forms.length)
@@ -76,7 +74,6 @@
       const phrases = (v.phrases && v.phrases.length)
         ? `<div class="word-card__extra"><b>短语</b> ${v.phrases.map(p => `${esc(p.en)}（${esc(p.zh)}）`).join('；')}</div>` : '';
       const sentence = v.sentence ? `<p class="word-card__sentence">${highlightWord(v.sentence, v.word)}</p>` : '';
-      const tip = v.tip ? `<div style="font-family:var(--font-serif);font-size:.8rem;color:var(--ink-faint);margin-top:var(--sp-2)">✎ ${esc(v.tip)}</div>` : '';
       return `<div class="card card--hover word-card">
         <div class="word-card__head">
           <div><span class="word-card__word">${esc(v.word)}</span>${phonetic}${v.pos ? `<span class="word-card__pos">${esc(v.pos)}</span>` : ''}${lvl}</div>
@@ -86,9 +83,10 @@
           </div>
         </div>
         <div class="word-card__meaning">释义：${esc(v.meaning)}</div>
-        ${forms}${phrases}${sentence}${tip}
+        ${forms}${phrases}${sentence}
         <div class="word-card__actions">
           ${v.sentence ? `<button class="speak-btn" data-speak="${esc(v.sentence)}"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a4 4 0 0 1 0 6"/></svg>读例句</button>` : ''}
+          <button class="btn btn--sm ${times ? 'btn--pine' : ''}" data-mark="${esc(v.word)}" title="每点一次，已记背次数 +1">${times ? `✓ 已记背 ${times} 次` : '○ 标记已背'}</button>
           <button class="btn btn--sm ${saved ? 'btn--pine' : ''}" data-save="${esc(v.word)}">${saved ? '✓ 已在生词本' : '+ 生词本'}</button>
         </div>
       </div>`;
@@ -97,32 +95,42 @@
     const render = (keepFocus) => {
       const list = matches();
       const slice = list.slice(0, shown);
+      let emptyMsg = '没有找到匹配的词，换个关键词试试。';
+      if (filter === 'marked') emptyMsg = '还没有标记过的词，点单词卡里的「○ 标记已背」，每点一次记一次。';
+      else if (filter === 'saved') emptyMsg = '生词本还是空的，遇到好词点「+ 生词本」吧。';
       const cards = slice.length ? slice.map(cardHtml).join('')
-        : `<div class="empty"><span class="empty__mark">∅</span><p>${filter === 'saved' ? '生词本还是空的，遇到好词点「+ 生词本」吧。' : '没有找到匹配的词，换个关键词试试。'}</p></div>`;
+        : `<div class="empty"><span class="empty__mark">∅</span><p>${emptyMsg}</p></div>`;
       // 微信内存有限：单次最多展开 120 条，避免 DOM 无限堆积导致卡顿/闪退
-      const MAX_SHOWN = 120;
       const moreBtn = list.length > shown
         ? (shown < MAX_SHOWN
             ? `<div class="load-more"><button class="btn btn--outline" id="vocab-more">加载更多 · 还有 ${(list.length - shown)} 个</button><span style="font-family:var(--font-serif);font-size:.74rem;color:var(--ink-faint);margin-left:10px">建议用上方搜索精确查找</span></div>`
             : `<div class="load-more"><span style="font-family:var(--font-serif);font-size:.8rem;color:var(--ink-faint)">已显示前 ${shown} 个，共 ${list.length} 个 · 请用搜索框精确定位（微信下限制展开数量以保证流畅）</span></div>`)
         : '';
-      const chips = [['all', '全部'], ['saved', '生词本'], ['四级', '四级'], ['六级', '六级'], ['精讲', '精讲']]
+      const chips = [['all', '全部'], ['marked', '已记背'], ['saved', '生词本'], ['四级', '四级'], ['六级', '六级']]
         .map(([k, label]) => {
           let n = VOCAB_ALL.length;
-          if (k === 'saved') n = S.vocabSaved.length;
+          if (k === 'marked') n = markedWordCount();
+          else if (k === 'saved') n = S.vocabSaved.length;
           else if (k !== 'all') n = VOCAB_ALL.filter(v => v.level === k).length;
           return `<button class="filter-chip ${filter === k ? 'is-active' : ''}" data-fav="${k}">${label}${n ? ' (' + n + ')' : ''}</button>`;
         }).join('');
+      const markedIntro = filter === 'marked'
+        ? `<div class="vocab-marked-note">📌 这里汇总你标记过的 <b>${markedWordCount()}</b> 个单词，累计记背 <b>${totalMarkTimes()}</b> 次；按记背次数从多到少排列，每点一次「已记背」加一次。</div>` : '';
       root.innerHTML = `
-        <div class="filter-bar">${chips}</div>
+        <div class="filter-bar">${chips}
+          <button class="btn btn--sm btn--outline" id="vocab-shuffle" style="margin-left:auto" title="重新随机排列，换一批单词积累">↻ 换一批</button>
+        </div>
         <div class="vocab-search">
           <input type="search" id="vocab-q" placeholder="搜单词、释义…共 ${VOCAB_ALL.length} 词" value="${esc(query)}" autocomplete="off">
           <span class="vocab-count">找到 ${list.length} 个词</span>
         </div>
+        ${markedIntro}
         <div class="grid grid--2">${cards}</div>
         ${moreBtn}
       `;
       $$('.filter-chip', root).forEach(b => b.addEventListener('click', () => { filter = b.dataset.fav; query = ''; shown = PAGE; render(); }));
+      const shuffleBtn = $('#vocab-shuffle', root);
+      if (shuffleBtn) shuffleBtn.addEventListener('click', () => { pool = shuffleWords(VOCAB_ALL); shown = PAGE; render(); toast('已换一批新单词'); });
       const input = $('#vocab-q', root);
       if (input) {
         input.addEventListener('input', (e) => { query = e.target.value; shown = PAGE; render(true); });
@@ -132,6 +140,11 @@
       if (more) more.addEventListener('click', () => { shown = Math.min(shown + PAGE, MAX_SHOWN); render(); });
       $$('[data-speak]', root).forEach(b => b.addEventListener('click', () => speak(b.dataset.speak)));
       $$('.pron-btn', root).forEach(b => b.addEventListener('click', () => speakWord(b.dataset.word, b.dataset.accent)));
+      $$('[data-mark]', root).forEach(b => b.addEventListener('click', () => {
+        const w = b.dataset.mark;
+        S.vocabMarked[w] = markedTimes(w) + 1;
+        save(); toast(`「${w}」已记背 ${S.vocabMarked[w]} 次`); render(true);
+      }));
       $$('[data-save]', root).forEach(b => b.addEventListener('click', () => {
         const w = b.dataset.save;
         if (S.vocabSaved.includes(w)) { S.vocabSaved = S.vocabSaved.filter(x => x !== w); toast('已从生词本移除'); }

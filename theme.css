@@ -178,6 +178,16 @@ input, select, textarea {
 }
 .word-card__extra b { color:var(--accent); font-weight:600; margin-right:4px; }
 .word-card__extra i { font-style:italic; color:var(--ink); }
+.vocab-marked-note {
+  font-family:var(--font-serif); font-size:.86rem; line-height:1.7; color:var(--ink-soft);
+  background:var(--pine-wash); border-left:3px solid var(--pine); border-radius:var(--radius);
+  padding:var(--sp-3) var(--sp-4); margin:0 0 var(--sp-5);
+}
+.vocab-marked-note b { color:var(--pine); font-weight:600; }
+@media (max-width:560px) {
+  .filter-bar { flex-wrap:wrap; }
+  #vocab-shuffle { margin-left:0 !important; }
+}
 
 /* ===== 音乐卡片 ===== */
 .music-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:var(--sp-3); }

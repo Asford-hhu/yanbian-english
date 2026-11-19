@@ -31,6 +31,7 @@
     checkins: [],              // ['2026-11-18', ...]
     practice: { reading: {}, listening: {}, mock: {} }, // 各题答题记录 {qid: {chosen, correct, ts}}
     vocabSaved: [],            // 生词本 [word]
+    vocabMarked: {},           // 已记背 { word: 次数 }，每次点标记 +1
     favExpr: [],               // 收藏表达 [en]
     mistakes: [],              // [{id, src, q, opts, answer, chosen, why, ts}]
     mockRuns: [],              // [{ts, score, total, seconds}]
@@ -654,6 +655,7 @@
       <span>打卡 <b>${S.checkins.length}</b> 天</span>
       <span>答题 <b>${totalAnswered()}</b> 次</span>
       <span>生词 <b>${S.vocabSaved.length}</b> 个</span>
+      <span>已记背 <b>${Object.keys(S.vocabMarked || {}).length}</b> 个</span>
       <span>收藏 <b>${S.favExpr.length}</b> 条</span>
       <span>错题 <b>${S.mistakes.length}</b> 道</span>
       <span>模考 <b>${S.mockRuns.length}</b> 次</span>`;
