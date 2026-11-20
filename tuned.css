@@ -1,0 +1,406 @@
+﻿/* ============================================================
+   砚边 · 霓虹玻璃「微调层」(tuned-nogrid.css · 无格子版)
+   ------------------------------------------------------------
+   定位：不是换风格，是在 theme.css 的紫色玻璃体系上做工艺级微调。
+   本文件 = tuned.css 去掉全部格纹，只留光斑与暗角。
+   加载顺序：styles.css → theme.css → tuned-nogrid.css
+   ============================================================ */
+
+/* ============================================================
+   1. 浅色令牌：把"接近白"往下压两档
+   ============================================================ */
+:root,
+:root[data-theme="light"] {
+  --bg-base:        #e9e4f8;
+  --bg-page:        linear-gradient(128deg, #ece7fb 0%, #e2e5f8 48%, #eee6fa 100%);
+
+  --text-main:      #1a1630;
+  --text-secondary: #4d4670;
+  --ink-faint:      #6e6790;
+  --accent-ink:     #5b25c9;
+
+  /* 玻璃卡片：白但不满，透出底下的紫 */
+  --bg-card:        rgba(255, 255, 255, .74);
+  --bg-card-solid:  rgba(252, 250, 255, .95);
+
+  --border-glow:    rgba(124, 92, 246, .26);
+  --tag-unactive-border: #cdc4ea;
+  --grid-texture:   rgba(124, 92, 246, .065);
+  --modal-mask:     rgba(30, 22, 62, .32);
+
+  --accent-wash:    rgba(139, 92, 246, .12);
+  --paper-2:        rgba(255, 255, 255, .58);
+  --paper-3:        rgba(124, 92, 246, .12);
+  --rule-strong:    rgba(124, 92, 246, .48);
+
+  /* 三层光斑都留在紫—靛一家里：加粉色会让整屏变"糖果色"，
+     高级感来自同一个色相不同的明度，而不是多色混搭。 */
+  --page-wash:      rgba(139, 92, 246, .26);
+  --page-wash-2:    rgba(99, 102, 241, .20);
+  --page-wash-3:    rgba(124, 58, 237, .13);
+
+  /* 两层阴影：近处一圈接触影 + 远处一团弥散影，玻璃才"坐得住" */
+  --shadow-card:    0 2px 6px rgba(48, 32, 96, .07),
+                    0 18px 44px rgba(48, 32, 96, .11);
+  --glow-soft:      0 0 0 1px rgba(139, 92, 246, .28),
+                    0 10px 30px rgba(139, 92, 246, .18);
+  --inner-hi:       inset 0 1px 0 rgba(255, 255, 255, .72);
+}
+
+/* ============================================================
+   2. 深色令牌：色调不动，只降一点描边霓虹、补一档文字对比
+   ============================================================ */
+:root[data-theme="dark"] {
+  --grid-texture:   rgba(255, 255, 255, .045);
+  --border-glow:    rgba(139, 92, 246, .40);
+  --inner-hi:       inset 0 1px 0 rgba(255, 255, 255, .12);
+  --text-secondary: #bfb8dd;
+}
+
+/* ============================================================
+   3. 背景：方格换成"大格 + 渐隐"，不再是一张硬网格
+   ------------------------------------------------------------
+   body 只留三团弥散光；网格挪到 body::before，96px 一格、
+   4–5% 透明度，再用径向遮罩把四周和底部吃掉，
+   于是只在页面中上部隐约有格，不会跟卡片抢戏。
+   ============================================================ */
+body {
+  background-image:
+    radial-gradient(58% 42% at 10% 6%,  var(--page-wash),   transparent 70%),
+    radial-gradient(50% 46% at 92% 10%, var(--page-wash-2), transparent 72%),
+    radial-gradient(46% 40% at 76% 92%, var(--page-wash-3), transparent 70%),
+    var(--bg-page) !important;
+  background-size: auto, auto, auto, auto !important;
+  background-attachment: fixed, fixed, fixed, fixed !important;
+}
+
+/* 本版：格子整块去掉。底纹不再用等距网格，只靠"三团光斑 + 暗角"两层渐变
+   撑体积，屏幕上不再有任何横平竖直的等距线。 */
+body::before { content: none; }
+
+/* 四周压一点暗角，玻璃卡才不会"贴"在一张纯色纸上 */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(130% 110% at 50% 0%, transparent 42%, rgba(46, 30, 92, .10) 100%);
+}
+:root[data-theme="dark"] body::after {
+  background: radial-gradient(130% 110% at 50% 0%, transparent 38%, rgba(6, 4, 20, .42) 100%);
+}
+
+/* 内容层必须在网格之上。
+   注意：不能用 position:relative 抬层级——.spine 原本是 position:fixed 的侧栏，
+   改成 relative 会把它变回文档流里的块，整页被顶下去 958px。伪元素 .page 之前
+   已经绘制，静态定位的正文天然在网格之上，什么都不用加。 */
+
+/* ============================================================
+   4. 表面层次：一张屏要有三档亮度，不能全是白卡
+   ============================================================ */
+/* hero：主视觉，最亮、最有体积 */
+.hero-card {
+  background: linear-gradient(142deg, rgba(255, 255, 255, .90) 0%, rgba(246, 241, 255, .66) 100%) !important;
+  border-color: rgba(139, 92, 246, .32) !important;
+  box-shadow:
+    0 2px 8px rgba(48, 32, 96, .07),
+    0 22px 56px rgba(48, 32, 96, .13),
+    inset 0 1px 0 rgba(255, 255, 255, .85) !important;
+}
+:root[data-theme="dark"] .hero-card {
+  background: linear-gradient(142deg, rgba(58, 50, 96, .58) 0%, rgba(34, 29, 66, .48) 100%) !important;
+}
+
+/* 统计条：凹进去的一格，压住页面节奏 */
+.stat-strip {
+  background: rgba(255, 255, 255, .42) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .70),
+    0 1px 2px rgba(48, 32, 96, .05) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+  backdrop-filter: blur(12px) saturate(140%) !important;
+}
+:root[data-theme="dark"] .stat-strip {
+  background: rgba(255, 255, 255, .035) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07) !important;
+}
+
+/* 打卡条：唯一允许带一点"暖"的横条 */
+.checkin-bar {
+  background: linear-gradient(100deg, rgba(139, 92, 246, .16), rgba(99, 102, 241, .10)) !important;
+  border-color: rgba(139, 92, 246, .28) !important;
+}
+
+/* 侧栏与顶栏：玻璃要透出底下的紫，而不是一块白板 */
+.spine {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .78), rgba(245, 240, 255, .62)) !important;
+  border-right-color: rgba(139, 92, 246, .22) !important;
+  box-shadow: 1px 0 0 rgba(139, 92, 246, .18), 12px 0 44px rgba(72, 50, 140, .07) !important;
+}
+:root[data-theme="dark"] .spine {
+  background: linear-gradient(180deg, rgba(44, 38, 78, .72), rgba(26, 22, 52, .66)) !important;
+}
+
+/* 未选中的胶囊：在白底上几乎看不见，给它一点底。
+   只挑"非激活"的那些——带 is-active 的按钮是白字压渐变底，
+   背景被覆盖掉就会变成白底白字（听说的倍速按钮踩过这个坑）。 */
+.filter-chip:not(.is-active),
+.btn:not(.btn--primary):not(.btn--pine):not(.is-active),
+.btn--sm:not(.btn--primary):not(.btn--pine):not(.is-active),
+.btn--outline:not(.is-active),
+.speed-row button:not(.is-active) {
+  background: rgba(255, 255, 255, .58) !important;
+  border-color: rgba(124, 92, 246, .30) !important;
+}
+:root[data-theme="dark"] .filter-chip:not(.is-active),
+:root[data-theme="dark"] .btn:not(.btn--primary):not(.btn--pine):not(.is-active),
+:root[data-theme="dark"] .btn--sm:not(.btn--primary):not(.btn--pine):not(.is-active),
+:root[data-theme="dark"] .btn--outline:not(.is-active),
+:root[data-theme="dark"] .speed-row button:not(.is-active) {
+  background: rgba(255, 255, 255, .06) !important;
+  border-color: rgba(255, 255, 255, .20) !important;
+}
+.filter-chip.is-active, .btn--primary, .btn--pine, .speed-row button.is-active {
+  background: var(--grad-active) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
+/* 选中导航：渐变胶囊保留，阴影收一点，别糊成一团光 */
+.nav-item.is-active {
+  box-shadow: 0 4px 14px rgba(139, 92, 246, .26), inset 0 1px 0 rgba(255, 255, 255, .28) !important;
+}
+.nav-item:hover { transform: none; }
+
+/* 输入框：搜索框是每屏第二大的面，给它玻璃而不是白条 */
+.vocab-search input[type="search"], #readingSelect, select {
+  background: rgba(255, 255, 255, .62) !important;
+  border-color: rgba(124, 92, 246, .28) !important;
+}
+:root[data-theme="dark"] .vocab-search input[type="search"],
+:root[data-theme="dark"] #readingSelect,
+:root[data-theme="dark"] select {
+  background: rgba(255, 255, 255, .06) !important;
+  border-color: rgba(255, 255, 255, .18) !important;
+}
+
+/* 层级：一屏只让一个东西发光。hover 只提亮描边，不再整体上浮 4px */
+.card--hover:hover, .music-card:hover, .news-card:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(139, 92, 246, .42) !important;
+  box-shadow:
+    0 2px 8px rgba(48, 32, 96, .08),
+    0 16px 38px rgba(139, 92, 246, .18) !important;
+}
+
+/* 词汇卡：一张卡里有 4–5 个紫色小标签（释义/词形/短语/近义/反义），
+   紫色于是从"强调"变成"底色"。这里把标签交还给中性色，
+   紫色只留给左竖条、词性、标签胶囊和发音键。 */
+.word-card__extra b {
+  color: var(--text-secondary) !important;
+  font-weight: 700 !important;
+  letter-spacing: .01em;
+}
+.word-card__syn b, .word-card__ant b { color: var(--text-secondary) !important; }
+.word-card__syn i, .word-card__ant i { color: var(--text-main) !important; }
+.word-card__extra { line-height: 1.75; }
+
+/* hero 左侧那道渐变竖条：浅色底上容易被白色吃掉，补一点辉光让它"亮着" */
+.hero-card::before {
+  box-shadow: 0 0 14px rgba(139, 92, 246, .38) !important;
+}
+
+/* 「从这里继续」四张卡在 3 列网格里会剩一个孤儿。
+   只对含 .quick-card 的网格放宽到 4 列，别动其它列表。 */
+.grid--auto:has(> .quick-card) {
+  grid-template-columns: repeat(auto-fit, minmax(208px, 1fr)) !important;
+}
+
+/* 文字对比：正文 19% 提到 27%，小字不再灰成一片 */
+body { color: var(--text-main); }
+.hero-card__desc { color: var(--text-secondary); }
+.hero-card__big { letter-spacing: -.022em; }
+.stat-cell__label, .countdown__label, .card__label { color: var(--text-secondary); }
+.ink-line { opacity: .85; }
+
+/* ============================================================
+   5. 手机：hero 瘦身 + 继续卡两列
+   ============================================================ */
+@media (max-width: 720px) {
+  /* 页眉日期被裁：.dateline 在窄屏宽度塌成 0，文字溢出到视口外 */
+  .dateline {
+    white-space: nowrap;
+    flex: 0 0 auto;
+    min-width: max-content;
+    margin-left: auto;
+  }
+
+  .hero-card {
+    padding: 16px 18px !important;
+    border-radius: 18px !important;
+  }
+  .hero-card::before {
+    left: 0 !important; top: 0 !important; bottom: 0 !important;
+    width: 4px !important; border-radius: 18px 0 0 18px !important;
+  }
+  .hero-card__row { gap: 0 !important; }
+  .hero-card__eyebrow {
+    font-size: .64rem !important;
+    letter-spacing: .16em !important;
+    margin-bottom: 6px;
+  }
+  .hero-card__big {
+    font-size: 1.32rem !important;      /* 32px → 21px */
+    line-height: 1.4 !important;
+    letter-spacing: -.01em !important;
+    margin: 0 !important;
+    text-wrap: balance;
+  }
+  .hero-card__desc {
+    font-size: .8rem !important;        /* 15.2px → 12.8px */
+    line-height: 1.6 !important;
+    margin-top: 8px !important;
+    max-width: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;             /* 只留两行，不再占半个屏 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .countdown {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 12px 0 0 !important;
+    border-top: 1px solid rgba(139, 92, 246, .22) !important;
+    text-align: left !important;
+  }
+  .countdown__num { font-size: 1.9rem !important; line-height: 1 !important; }
+  .countdown__unit { font-size: .62rem !important; letter-spacing: .14em !important; }
+  .countdown__label { font-size: .72rem !important; margin: 0 0 0 auto !important; }
+
+  /* 继续学习：两列，四张长条压掉一屏的问题解决
+     （上面的 :has 规则特异性更高，这里必须同等特异性地盖回去） */
+  .grid--auto, .grid--auto:has(> .quick-card) { grid-template-columns: 1fr 1fr !important; }
+  .quick-card { padding: 14px 14px !important; border-radius: 16px !important; }
+  .quick-card .card__label { font-size: .62rem; }
+  .quick-card strong { font-size: .95rem !important; }
+  .quick-card p { font-size: .74rem !important; line-height: 1.5; }
+
+  .stat-cell { padding: 12px 14px !important; }
+  .stat-cell__num { font-size: 1.45rem !important; }
+}
+
+@media (max-width: 420px) {
+  .hero-card__big { font-size: 1.22rem !important; }
+}
+
+/* 横屏 / 小高度机器：hero 再收一档 */
+@media (max-height: 560px) and (max-width: 900px) {
+  .hero-card__desc { -webkit-line-clamp: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before, body::after { display: none; }
+}
+
+/* ============================================================
+   词汇卡 · 发音键分出"美 / 英"
+   ------------------------------------------------------------
+   原样：theme.css 给 .pron-btn 设了 font-size:0，把 DOM 里的
+   "美 ▶ / 英 ▶" 藏掉、换成同一个喇叭图标 —— 两个键长得一模一样，
+   点下去才知道是哪种口音。这里把字数放回来，改成两枚小胶囊：
+   喇叭 + 美/英，字从 data-accent 上取（us→美，uk→英）。
+   ============================================================ */
+.word-card__pron { top: 14px !important; right: 14px !important; gap: 6px !important; }
+
+.pron-btn {
+  width: auto !important;
+  height: 26px !important;
+  padding: 0 9px 0 7px !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px !important;
+  border: 1px solid rgba(124, 92, 246, .28) !important;
+  background: rgba(255, 255, 255, .58) !important;
+  color: var(--accent-ink) !important;
+  font-size: 0;                 /* 原文本仍隐藏，改用 ::after 上标签 */
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: transform .18s cubic-bezier(.22, 1, .36, 1), border-color .18s, background .18s, box-shadow .18s;
+}
+
+/* 喇叭：改用遮罩，颜色跟着文字走（深色下自动变亮） */
+.pron-btn::before {
+  content: '';
+  width: 12px; height: 12px;
+  flex: 0 0 auto;
+  background-image: none !important;
+  background-color: currentColor !important;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 5 6 9H3v6h3l5 4z'/%3E%3Cpath d='M15.5 8.5a5 5 0 0 1 0 7'/%3E%3Cpath d='M19 5a10 10 0 0 1 0 14'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 5 6 9H3v6h3l5 4z'/%3E%3Cpath d='M15.5 8.5a5 5 0 0 1 0 7'/%3E%3Cpath d='M19 5a10 10 0 0 1 0 14'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* 口音标记 */
+.pron-btn::after {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  line-height: 1;
+  color: currentColor;
+}
+.pron-btn[data-accent="us"]::after { content: '美'; }
+.pron-btn[data-accent="uk"]::after { content: '英'; }
+
+.pron-btn:hover {
+  transform: translateY(-1px) !important;
+  background: rgba(139, 92, 246, .12) !important;
+  border-color: rgba(124, 92, 246, .50) !important;
+  box-shadow: 0 4px 12px rgba(48, 32, 96, .12) !important;
+}
+.pron-btn:active { transform: scale(.95) !important; }
+.pron-btn:focus-visible {
+  outline: none;
+  border-color: rgba(124, 92, 246, .72) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, .24) !important;
+}
+
+/* 深色：胶囊跟着玻璃令牌，不做第二个发光圆点 */
+:root[data-theme="dark"] .pron-btn {
+  background: rgba(255, 255, 255, .07) !important;
+  border-color: rgba(139, 92, 246, .40) !important;
+  color: #d9cffb !important;
+}
+:root[data-theme="dark"] .pron-btn:hover {
+  background: rgba(167, 139, 250, .18) !important;
+  border-color: rgba(167, 139, 250, .62) !important;
+}
+
+/* 词条头部：桌面给右上角两枚胶囊留出固定空地。
+   .word-card__pron 是绝对定位，而"词 / 音标 / 级别签"这一行会一直向右排，
+   只挡住单词不够——手机量到音标和级别签会钻到胶囊底下 19px。 */
+.word-card__head > div:first-child { padding-right: 112px; min-width: 0; }
+.word-card__word { padding-right: 0; }
+/* 音标：① 别在音标内部断行（会出现单个 "/" 落在行尾）；
+   ② 做成 inline-block，让浏览器可以在它前面折行——
+   词与音标在 HTML 里是紧挨着的（没有空格），原本没有折行点，
+   于是"词 + 音标"会作为一整块溢出到右上角胶囊底下。 */
+.word-card__phonetic { display: inline-block; white-space: nowrap; }
+@media (max-width: 560px) {
+  /* 手机上改成"文字 | 胶囊"的正常两列：胶囊脱离绝对定位，
+     flex 自己分配宽度，就不会再压字，也不需要靠 padding 硬撑。 */
+  /* 手机上胶囊回到绝对定位，文字栏用内边距让出位置：
+     这样"词 / 音标 / 级别签"永远画在 299-112 的区间里，不可能压到胶囊。 */
+  .word-card__pron { position: absolute !important; top: 12px !important; right: 12px !important; flex: 0 0 auto; gap: 5px !important; }
+  .word-card__head > div:first-child { padding-right: 26px; flex: 1 1 auto; }
+  .word-card__word { font-size: 1.28rem !important; }
+  .pron-btn { height: 30px !important; padding: 0 10px 0 7px !important; gap: 5px; }
+  .pron-btn::before { width: 13px; height: 13px; }
+  .pron-btn::after { font-size: 11px; }
+}
+
+
+

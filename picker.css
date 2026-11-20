@@ -1,0 +1,226 @@
+/* ============================================================
+   阅读页 · 选篇器（自定义下拉）
+   ------------------------------------------------------------
+   原生 <select> 的弹出列表由系统绘制：圆角、阴影、选中色都插不上手，
+   深色模式下还会出现"白底白字"看不清。这里把 #readingSelect 收起来，
+   用一个和站点同一套语言的选择器替它：玻璃面板 + 序号 + 级别签 +
+   搜索 + 键盘操作；原生 select 仍在 DOM 里，值与 change 事件照旧。
+   ============================================================ */
+
+.picker-ready #readingSelect { display: none !important; }
+
+.picker { position: relative; flex: 1 1 300px; max-width: 560px; min-width: 0; }
+
+/* ---------- 收起状态：一条"稿签" ---------- */
+.picker__btn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; height: 44px; padding: 0 8px 0 14px;
+  border: 1px solid rgba(124, 92, 246, .26);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .58);
+  color: var(--text-main);
+  font: inherit; font-size: .9rem; line-height: 1;
+  text-align: left; cursor: pointer;
+  transition: transform .18s cubic-bezier(.22, 1, .36, 1),
+              border-color .18s, box-shadow .18s, background .18s;
+}
+.picker__btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(124, 92, 246, .46);
+  background: rgba(255, 255, 255, .74);
+  box-shadow: 0 6px 18px rgba(48, 32, 96, .10);
+}
+.picker__btn:focus-visible {
+  outline: none;
+  border-color: rgba(124, 92, 246, .72);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, .22);
+}
+.picker.is-open .picker__btn {
+  border-color: rgba(124, 92, 246, .60);
+  background: rgba(255, 255, 255, .80);
+  box-shadow: 0 6px 20px rgba(48, 32, 96, .12);
+}
+
+.picker__ico { flex: 0 0 auto; width: 16px; height: 16px; opacity: .5; }
+.picker__ico svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+.picker__label {
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 500;
+}
+
+/* 级别签：和站内 .tag 同一档视觉，不抢标题 */
+.picker__lv {
+  flex: 0 0 auto;
+  padding: 2px 8px; border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: .68rem; letter-spacing: .02em;
+  color: var(--accent-ink);
+  background: rgba(139, 92, 246, .10);
+  border: 1px solid rgba(139, 92, 246, .18);
+}
+
+.picker__chev {
+  flex: 0 0 auto; display: grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  color: var(--accent-ink); opacity: .75;
+  transition: transform .22s cubic-bezier(.22, 1, .36, 1), opacity .2s;
+}
+.picker__chev svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.picker.is-open .picker__chev { transform: rotate(180deg); opacity: 1; }
+
+/* 下方空间不够时，面板翻到触发条上方 */
+.picker__panel.is-flip { top: auto; bottom: calc(100% + 8px); }
+
+/* ---------- 展开状态：一张玻璃卡 ---------- */
+.picker__panel {
+  position: absolute; z-index: 70;
+  top: calc(100% + 8px); left: 0; min-width: 100%;
+  display: flex; flex-direction: column;
+  max-height: min(58vh, 520px);
+  background: rgba(253, 252, 255, .975);
+  border: 1px solid rgba(124, 92, 246, .26);
+  border-radius: 16px;
+  box-shadow: 0 18px 44px rgba(31, 27, 75, .18), inset 0 1px 0 rgba(255, 255, 255, .8);
+  backdrop-filter: blur(20px) saturate(165%);
+  -webkit-backdrop-filter: blur(20px) saturate(165%);
+  overflow: hidden;
+  animation: picker-in .18s cubic-bezier(.22, 1, .36, 1);
+}
+@keyframes picker-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.995); }
+  to   { opacity: 1; transform: none; }
+}
+
+.picker__search {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(124, 92, 246, .16);
+}
+.picker__search svg { flex: 0 0 auto; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; opacity: .45; }
+.picker__search input {
+  flex: 1 1 auto; min-width: 0;
+  border: 0 !important; background: transparent !important;
+  box-shadow: none !important; padding: 2px 0 !important;
+  border-radius: 0 !important;
+  font: inherit; font-size: .86rem; color: var(--text-main);
+}
+.picker__search input::placeholder { color: var(--ink-faint); }
+.picker__search input:focus { outline: none; box-shadow: none !important; }
+
+.picker__list {
+  overflow-y: auto; padding: 6px 6px 10px; overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent 100%);
+}
+.picker__list::-webkit-scrollbar { width: 8px; }
+.picker__list::-webkit-scrollbar-thumb { background: rgba(124, 92, 246, .28); border-radius: 999px; }
+.picker__list::-webkit-scrollbar-track { background: transparent; }
+
+.picker__row {
+  display: grid; grid-template-columns: 30px 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 10px;
+  cursor: pointer; color: var(--text-main);
+  font-size: .88rem;
+  transition: background .14s, box-shadow .14s;
+}
+.picker__row + .picker__row { margin-top: 1px; }
+.picker__row:hover { background: rgba(139, 92, 246, .09); }
+.picker__row.is-active {
+  background: rgba(139, 92, 246, .14);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.picker__row.is-active .picker__no { color: var(--accent-ink); opacity: 1; }
+
+.picker__no {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-size: .72rem; letter-spacing: .04em;
+  color: var(--ink-faint); opacity: .85;
+  text-align: right;
+}
+.picker__t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker__row.is-active .picker__t { font-weight: 600; }
+
+.picker__foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 12px;
+  border-top: 1px solid rgba(124, 92, 246, .16);
+  font-family: var(--font-display);
+  font-size: .68rem; letter-spacing: .03em;
+  color: var(--ink-faint);
+}
+.picker__foot kbd {
+  font: inherit; padding: 1px 5px; margin: 0 1px;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, .10);
+  color: var(--accent-ink);
+}
+
+.picker__none { padding: 18px 12px; text-align: center; font-size: .84rem; color: var(--ink-faint); }
+
+/* ---------- 深色：面板跟着玻璃令牌走，不再"白底白字" ---------- */
+:root[data-theme="dark"] .picker__btn {
+  background: rgba(255, 255, 255, .07);
+  border-color: rgba(139, 92, 246, .40);
+}
+:root[data-theme="dark"] .picker__btn:hover { background: rgba(255, 255, 255, .11); border-color: rgba(139, 92, 246, .60); }
+:root[data-theme="dark"] .picker.is-open .picker__btn { background: rgba(255, 255, 255, .12); border-color: rgba(167, 139, 250, .70); }
+:root[data-theme="dark"] .picker__lv {
+  color: #d9cffb;
+  background: rgba(167, 139, 250, .16);
+  border-color: rgba(167, 139, 250, .30);
+}
+:root[data-theme="dark"] .picker__panel {
+  background: rgba(32, 27, 62, .975);
+  border-color: rgba(139, 92, 246, .46);
+  box-shadow: 0 22px 52px rgba(0, 0, 0, .48), inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+:root[data-theme="dark"] .picker__search { border-bottom-color: rgba(139, 92, 246, .24); }
+:root[data-theme="dark"] .picker__search input { color: var(--text-main); }
+:root[data-theme="dark"] .picker__row:hover { background: rgba(167, 139, 250, .12); }
+:root[data-theme="dark"] .picker__row.is-active { background: rgba(167, 139, 250, .20); box-shadow: inset 3px 0 0 #a78bfa; }
+:root[data-theme="dark"] .picker__foot { border-top-color: rgba(139, 92, 246, .24); }
+:root[data-theme="dark"] .picker__foot kbd { background: rgba(167, 139, 250, .16); color: #d9cffb; }
+
+/* ---------- 手机：面板贴住触发条，翻上翻下自动选，触控尺寸按 44px ---------- */
+@media (max-width: 720px) {
+  .picker { flex: 1 1 100%; max-width: none; }
+  .picker__btn { height: 44px; font-size: .88rem; }
+  /* 手机上窄，收起态的文档图标让位给标题 */
+  .picker__ico { display: none; }
+  .picker__btn { padding-left: 14px; }
+  .picker__panel {
+    position: absolute;
+    left: 0; right: 0; top: calc(100% + 8px);
+    max-width: calc(100vw - 20px);
+    border-radius: 18px;
+  }
+  .picker__panel.is-flip { top: auto; bottom: calc(100% + 8px); }
+
+  .picker__search { padding: 10px 12px; }
+  /* 16px 以上，iOS 聚焦时才不会自动放大页面 */
+  .picker__search input { font-size: 16px !important; padding: 4px 0 !important; }
+
+  .picker__row { min-height: 44px; padding: 10px 10px; font-size: .92rem; }
+  .picker__no { font-size: .7rem; }
+  /* 手机上标题允许两行，长标题不会被截成一样的前缀 */
+  .picker__t {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.35;
+  }
+  .picker__row { grid-template-columns: 28px 1fr auto; gap: 8px; }
+
+  .picker__hint { display: none; }
+  .picker__foot {
+    justify-content: flex-end;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    font-size: .7rem;
+  }
+  .picker__row { -webkit-tap-highlight-color: transparent; }
+}
