@@ -94,10 +94,14 @@
     const isNew = a.id.indexOf('x-') === 0 || todayPicks(a.cat).indexOf(a.id) !== -1;
     const imgs = (a.images || []).slice(0, 3);
     const cover = imgs[0] || '';
+    // 无官方配图时用主题渐变封面（矢量高清，不硬配无关图片）
+    const catLabel = (CATS.find(c => c.id === a.cat) || {}).name || '外刊';
+    const grad = `n2-ph--${a.cat || 'daily'}`;
+    const placeholder = cover ? '' : `<div class="n2-card__ph ${grad}" aria-hidden="true"><span class="n2-ph__mark">${esc((CATS.find(c => c.id === a.cat) || {}).icon || '◉')}</span><span class="n2-ph__label">${esc(catLabel)}</span></div>`;
     return `
       <article class="n2-card" data-i="${i}">
         <div class="n2-card__media">
-          <div class="n2-card__ph" aria-hidden="true">▤</div>
+          ${placeholder}
           ${cover ? `<img src="${esc(cover)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}
           <span class="n2-card__level">${esc(levelOf(a))}</span>
           ${isNew ? '<span class="n2-card__new">今日上新</span>' : ''}
