@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    砚边 · 霓虹玻璃「微调层」(tuned-nogrid.css · 无格子版)
    ------------------------------------------------------------
    定位：不是换风格，是在 theme.css 的紫色玻璃体系上做工艺级微调。
@@ -277,7 +277,17 @@ body { color: var(--text-main); }
     text-align: left !important;
   }
   .countdown__num { font-size: 1.9rem !important; line-height: 1 !important; }
-  .countdown__unit { font-size: .62rem !important; letter-spacing: .14em !important; }
+  /* 一行里最挤的是 "DAYS TO GO"：手机换成 "天"，跟着数字走 */
+  .countdown__unit { display: none !important; }
+  .countdown__num::after {
+    content: '天';
+    margin-left: 4px;
+    font-family: var(--font-display);
+    font-size: .72rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--text-secondary);
+  }
   .countdown__label { font-size: .72rem !important; margin: 0 0 0 auto !important; }
 
   /* 继续学习：两列，四张长条压掉一屏的问题解决
