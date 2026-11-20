@@ -1,0 +1,34 @@
+.quick-card { position: relative; }
+
+  .quick-card > .card-orn {
+    position: absolute;
+    right: 7px;
+    top: 50%;
+    transform: translateY(-46%);
+    width: 86px;
+    height: 86px;
+    pointer-events: none;
+    z-index: 0;
+    transition: color .4s cubic-bezier(.22,1,.36,1);
+  }
+  .quick-card > .card-orn .orn { width: 100%; height: 100%; display: block; }
+  .quick-card > *:not(.card-orn) { position: relative; z-index: 1; }
+
+  /* 日间：低饱和淡紫，16%（比原规范 8–12% 提一档，看得见但不抢字） */
+  .quick-card > .card-orn { color: rgba(104, 80, 206, .16); }
+  .quick-card:hover > .card-orn { color: rgba(104, 80, 206, .18); }
+
+  /* 夜间：淡紫提亮，26%，只换颜色不改造型 */
+  :root[data-theme="dark"] .quick-card > .card-orn { color: rgba(210, 203, 255, .26); }
+  :root[data-theme="dark"] .quick-card:hover > .card-orn { color: rgba(210, 203, 255, .30); }
+
+  @media (max-width: 720px) {
+    /* 手机卡片只有 171×128，居中会碰到最后一行说明，改贴到标题右侧的空档 */
+    .quick-card > .card-orn {
+      width: 58px;
+      height: 58px;
+      right: 6px;
+      top: 22px;
+      transform: none;
+    }
+  }
