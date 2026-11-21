@@ -66,3 +66,40 @@
 @media (prefers-reduced-motion: reduce) {
   .n2-card__ph::before { animation: none !important; }
 }
+
+/* ============================================================
+   8) 外刊模块（.n2）移动端流畅度专项
+   ------------------------------------------------------------
+   只作用于 ≤720px，视觉几乎无损；不改 DOM / 文案 / 功能 JS。
+   掉帧根因（CDP 实测基线 willChange=11 / runningAnim=13）：
+     A. news.css:179 给每张封面/画廊图加了 will-change:transform，
+        等于把十几张大图全部提升为独立合成层，滚动时合成树臃肿、显存吃紧。
+        这些图只有桌面 hover 才 transform，触屏无 hover，无需常驻提升。
+     B. news.css:81 渐变占位封面 ::before 是 200%×200% 大图层，
+        16s 无限 translate+rotate，滚动时持续与主滚动抢合成资源。
+     C. 续载时每次批量给 6 张卡片跑 translateY 入场动画，瞬时合成抖动。
+   ============================================================ */
+@media (max-width: 720px) {
+  /* A) 取消封面/画廊图常驻合成层与 hover 位移；触屏没有真实 hover */
+  .n2-card__media img,
+  .n2-gallery__item img {
+    will-change: auto !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  /* B) 渐变占位封面静态化：保留高清渐变视觉，停掉无限漂移合成 */
+  .n2-card__ph::before {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  /* C) 续载入场改为纯透明度淡入，去掉 translateY 位移合成；
+     仅替换动画名，沿用 news.css 的 .35s / ease / both，
+     桌面端动画与视觉完全不变。 */
+  .n2-card { animation-name: n2fade-mobile !important; }
+  @keyframes n2fade-mobile {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+}
