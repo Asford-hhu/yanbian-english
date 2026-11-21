@@ -210,9 +210,10 @@ const DATA = {
     {
       group: '词典与语料工具',
       items: [
-        { icon: 'O', title: 'Oxford Learner\'s Dictionaries', desc: '权威英英词典，看英文释义学地道用法', url: 'https://www.oxfordlearnersdictionaries.com/' },
-        { icon: 'E', title: 'YouGlish · 发音语境', desc: '搜索单词在真实视频中的发音与语境', url: 'https://youglish.com/' },
-        { icon: '写', title: 'Write & Improve（剑桥）', desc: '免费写作批改工具，即时反馈', url: 'https://writeandimprove.com/' }
+        { icon: '有', title: '网易有道词典 · 在线版', desc: '国内访问稳定，英汉释义、真人发音与双语例句一站查', url: 'https://dict.youdao.com/' },
+        { icon: '金', title: '金山词霸 · 在线词典', desc: '权威释义、搭配与海量双语例句，查词造句都方便', url: 'https://www.iciba.com/' },
+        { icon: '语', title: '中国日报 · 英语点津', desc: '官方双语语料与词汇用法栏目，学地道表达与时事措辞', url: 'https://language.chinadaily.com.cn/' },
+        { icon: '批', title: '批改网 · 作文自动批改', desc: '国内高校常用英文写作批改平台，提交即得分数与逐句建议', url: 'https://www.pigai.org/' }
       ]
     }
   ],
