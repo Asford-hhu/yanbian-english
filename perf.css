@@ -47,7 +47,22 @@
   }
 }
 
-/* 6) 尊重系统「减少动态效果」偏好：关掉外刊无图封面的持续漂移动画 */
+/* 6) 移动端侧栏改回完全不透明实色。
+   tuned.css:137/142 用 !important 给侧栏设了半透明渐变，原本靠 backdrop-filter
+   撑住「不透明」观感；上面第 2 条关掉毛玻璃后，这层半透明就会透出背后页面。
+   这里用同等特异性 + 后加载覆盖成实色渐变，保留上浅下深的层次但不透明。 */
+:root, :root[data-theme="light"] {
+  --spine-solid: linear-gradient(180deg, #fbfaff 0%, #f0ebfc 100%);
+}
+:root[data-theme="dark"] {
+  --spine-solid: linear-gradient(180deg, #2c264e 0%, #1a1634 100%);
+}
+@media (max-width: 720px) {
+  .spine { background: var(--spine-solid) !important; }
+  :root[data-theme="dark"] .spine { background: var(--spine-solid) !important; }
+}
+
+/* 7) 尊重系统「减少动态效果」偏好：关掉外刊无图封面的持续漂移动画 */
 @media (prefers-reduced-motion: reduce) {
   .n2-card__ph::before { animation: none !important; }
 }
