@@ -1,0 +1,65 @@
+/* ============================================================
+   砚边 · 真题模考样式（mock-exam.css）
+   ★ 仅作用于 .mock-exam / .mock-* 作用域，走主题变量
+   ============================================================ */
+.mock-exam { width: 100%; }
+.exam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--sp-4); }
+.exam-card { display: flex; flex-direction: column; }
+
+/* 答题页 */
+.mock-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: var(--sp-4); flex-wrap: wrap; }
+.mock-timer { display: flex; flex-direction: column; align-items: center; }
+.mock-timer__time { font-family: var(--font-display); font-size: 2rem; font-variant-numeric: tabular-nums; line-height: 1; color: var(--accent-ink); }
+.mock-timer__label { font-size: .72rem; color: var(--text-secondary); letter-spacing: .1em; }
+.mock-layout { display: grid; grid-template-columns: 1fr 260px; gap: var(--sp-4); align-items: start; }
+.mock-main { padding: var(--sp-4); min-height: 320px; }
+.mock-sheet { padding: var(--sp-4); position: sticky; top: 12px; }
+.mock-sheet__answered { font-size: .82rem; color: var(--text-secondary); margin: 8px 0 var(--sp-3); }
+.mock-sheet__answered b { color: var(--accent-ink); }
+.mock-sheet__secs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--sp-4); padding-top: var(--sp-3); border-top: 1px solid var(--border-glow); }
+.as-sec { margin-bottom: var(--sp-3); }
+.as-sec__t { font-size: .78rem; color: var(--text-secondary); margin-bottom: 6px; }
+.as-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.as-num { aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--tag-unactive-border); background: transparent; color: var(--text-secondary); font-size: .8rem; cursor: pointer; display: grid; place-items: center; }
+.as-num.is-done { background: var(--accent-wash); border-color: var(--accent); color: var(--accent-ink); }
+.as-num.is-cur { box-shadow: 0 0 0 2px var(--accent); }
+.mock-qhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: var(--sp-3); }
+.mock-qno { font-size: .82rem; color: var(--text-secondary); }
+.mock-qnav { display: flex; justify-content: space-between; margin-top: var(--sp-5); }
+
+/* 听力 */
+.mock-audio { padding: var(--sp-3); border-radius: var(--radius); background: var(--accent-wash); border: 1px solid var(--border-glow); margin-bottom: var(--sp-4); }
+.mock-play { width: 100%; padding: 12px; border-radius: var(--chip-radius); border: none; cursor: pointer; font-family: var(--font-display); font-weight: 600; color: #fff; background: var(--grad-active); }
+.mock-play:disabled { opacity: .6; cursor: default; }
+.mock-audio__tip { font-size: .75rem; color: var(--text-secondary); margin-top: 8px; line-height: 1.6; }
+.mock-passage { margin-bottom: var(--sp-4); border: 1px solid var(--border-glow); border-radius: var(--radius); background: var(--accent-wash); }
+.mock-passage summary { cursor: pointer; padding: 10px var(--sp-3); font-size: .82rem; color: var(--accent-ink); font-weight: 600; }
+.mock-passage > div { padding: 0 var(--sp-3) var(--sp-3); font-family: var(--font-body); font-size: .9rem; line-height: 1.85; color: var(--text-main); white-space: pre-wrap; }
+
+/* 结果页 */
+.mock-score__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); margin-top: var(--sp-4); text-align: center; }
+.mock-score__num { font-family: var(--font-display); font-size: 2.2rem; font-weight: 700; color: var(--accent-ink); line-height: 1; }
+.mock-score__num span { font-size: 1rem; color: var(--text-secondary); }
+.mock-score__lb { font-size: .74rem; color: var(--text-secondary); margin-top: 6px; }
+.res-q { padding: var(--sp-3) 0; border-bottom: 1px solid var(--border-glow); }
+.res-q:last-child { border-bottom: none; }
+.res-q__h { display: flex; justify-content: space-between; font-size: .92rem; }
+.res-q.is-right .res-q__h span { color: #16a34a; }
+.res-q.is-wrong .res-q__h span { color: #e11d48; }
+.res-q__stem { margin: 6px 0; font-family: var(--font-body); color: var(--text-main); line-height: 1.7; }
+.res-q__opts { font-size: .85rem; line-height: 1.9; color: var(--text-secondary); }
+.res-q__opts .is-ans { color: #16a34a; font-weight: 600; }
+.res-q__opts .is-chosen { color: #e11d48; }
+.res-q__why { margin-top: 8px; padding: 10px; border-radius: var(--radius); background: var(--accent-wash); font-size: .84rem; line-height: 1.8; color: var(--text-secondary); white-space: pre-wrap; }
+
+@media (max-width: 860px) {
+  .mock-layout { grid-template-columns: 1fr; }
+  .mock-sheet { position: static; }
+}
+@media (max-width: 720px) {
+  .exam-grid { grid-template-columns: 1fr; }
+  .mock-score__grid { gap: 6px; }
+  .mock-score__num { font-size: 1.7rem; }
+  .mock-timer__time { font-size: 1.6rem; }
+  .as-grid { grid-template-columns: repeat(6, 1fr); }
+}
