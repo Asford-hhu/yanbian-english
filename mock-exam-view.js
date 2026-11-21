@@ -468,8 +468,9 @@
     try {
       Object.defineProperty(R, 'mock', { get: () => renderMock, set: () => {}, configurable: false });
     } catch (e) { R.mock = renderMock; }
-    // 极端情况下若仍停在模考页，直接重置并回到新版列表，不渲染旧排版
-    if (API.currentView && API.currentView() === 'mock') { hardReset(); paintList(); }
+    // 只有在确实看到旧版排版被渲染时才重绘；绝不打断用户已经新开的一局
+    const legacy = document.querySelector('#view-mock #dial, #view-mock #startTimer');
+    if (legacy) { hardReset(); paintList(); }
   }
   if (document.readyState === 'complete') setTimeout(reclaim, 0);
   else window.addEventListener('load', () => setTimeout(reclaim, 0));
