@@ -40,7 +40,10 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=DM+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- 字体非阻塞加载：media=print 让字体 CSS 不阻塞首屏渲染，加载完成后切回 all。
+     首屏先用系统字体渲染，字体到达后 swap（本就 display=swap），视觉无损、杜绝白屏等待。 -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=DM+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=DM+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="styles.css?v=20261125a">
 <link rel="stylesheet" href="theme.css?v=20261125b">
 <link rel="stylesheet" href="tuned.css?v=20261127a">
@@ -210,22 +213,24 @@
 <!-- 全局提示 -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="data.js?v=20261128b"></script>
-<script src="vocab-data.js?v=20261125a"></script>
-<script src="vocab-cet.js?v=20261125a"></script>
-<script src="reading-extra.js?v=20261125a"></script>
-<script src="writing-extra.js?v=20261125a"></script>
-<script src="listening-extra.js?v=20261125a"></script>
-<script src="listening-extra2.js?v=20261128b"></script>
-<script src="listen-audio.js?v=20261128b"></script>
-<script src="music-data.js?v=20261125a"></script>
-<script src="news-data.js?v=20261126b"></script>
-<script src="app.js?v=20261125a"></script>
-<script src="app2.js?v=20261129a"></script>
-<script src="music-view.js?v=20261125a"></script>
-<script src="news-view.js?v=20261126b"></script>
-<script src="theme-mode.js"></script>
-<script src="picker.js?v=20261127a"></script>
+<!-- 全部 defer：脚本并行下载、按顺序在 DOMContentLoaded 前执行完，不阻塞 HTML 解析与首屏绘制。
+     data 在前、app 在后、各 register 就绪后再由 app.js 的 init() 统一挂载，顺序与功能完全不变。 -->
+<script src="data.js?v=20261128b" defer></script>
+<script src="vocab-data.js?v=20261125a" defer></script>
+<script src="vocab-cet.js?v=20261125a" defer></script>
+<script src="reading-extra.js?v=20261125a" defer></script>
+<script src="writing-extra.js?v=20261125a" defer></script>
+<script src="listening-extra.js?v=20261125a" defer></script>
+<script src="listening-extra2.js?v=20261128b" defer></script>
+<script src="listen-audio.js?v=20261128b" defer></script>
+<script src="music-data.js?v=20261125a" defer></script>
+<script src="news-data.js?v=20261126b" defer></script>
+<script src="app.js?v=20261125a" defer></script>
+<script src="app2.js?v=20261129a" defer></script>
+<script src="music-view.js?v=20261125a" defer></script>
+<script src="news-view.js?v=20261126b" defer></script>
+<script src="theme-mode.js" defer></script>
+<script src="picker.js?v=20261127a" defer></script>
 <script src="overlay.js?v=20261128a" defer></script>
 </body>
 </html>
