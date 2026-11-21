@@ -25,6 +25,8 @@
     (window.YANBIAN_VOCAB_1500 || []).forEach(v => push(v));
     return merged;
   })();
+  // 预计算各难度词条数：筛选 chip 的计数原本每次 render 都要全表扫描两次，这里只算一次
+  const VOCAB_LEVEL_COUNT = VOCAB_ALL.reduce((m, v) => { const k = v.level; if (k) m[k] = (m[k] || 0) + 1; return m; }, {});
   // Fisher-Yates 洗牌：每次进入词汇模块换一批顺序，方便日积月累不同的词
   const shuffleWords = (arr) => {
     const a = arr.slice();
@@ -115,7 +117,7 @@
           let n = VOCAB_ALL.length;
           if (k === 'marked') n = markedWordCount();
           else if (k === 'saved') n = S.vocabSaved.length;
-          else if (k !== 'all') n = VOCAB_ALL.filter(v => v.level === k).length;
+          else if (k !== 'all') n = VOCAB_LEVEL_COUNT[k] || 0;
           return `<button class="filter-chip ${filter === k ? 'is-active' : ''}" data-fav="${k}">${label}${n ? ' (' + n + ')' : ''}</button>`;
         }).join('');
       const markedIntro = filter === 'marked'
@@ -132,30 +134,53 @@
         <div class="grid grid--2">${cards}</div>
         ${moreBtn}
       `;
-      $$('.filter-chip', root).forEach(b => b.addEventListener('click', () => { filter = b.dataset.fav; query = ''; shown = PAGE; render(); }));
-      const shuffleBtn = $('#vocab-shuffle', root);
-      if (shuffleBtn) shuffleBtn.addEventListener('click', () => { pool = shuffleWords(VOCAB_ALL); shown = PAGE; render(); toast('已换一批新单词'); });
-      const input = $('#vocab-q', root);
-      if (input) {
-        input.addEventListener('input', (e) => { query = e.target.value; shown = PAGE; render(true); });
-        if (keepFocus) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+      // 重建后恢复输入框焦点与光标位置（仅搜索需保留）
+      if (keepFocus) {
+        const input = $('#vocab-q', root);
+        if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
       }
-      const more = $('#vocab-more', root);
-      if (more) more.addEventListener('click', () => { shown = Math.min(shown + PAGE, MAX_SHOWN); render(); });
-      $$('[data-speak]', root).forEach(b => b.addEventListener('click', () => speak(b.dataset.speak)));
-      $$('.pron-btn', root).forEach(b => b.addEventListener('click', () => speakWord(b.dataset.word, b.dataset.accent)));
-      $$('[data-mark]', root).forEach(b => b.addEventListener('click', () => {
-        const w = b.dataset.mark;
+    };
+
+    /* 事件委托 + 搜索防抖：
+       原实现每次 render 都给几十张卡片重新绑定上百个监听器，逐字搜索时
+       反复「重建 DOM + 解绑 + 绑定」，造成明显卡帧。改为在容器上只绑定一次，
+       搜索输入再以 120ms 防抖合并连续按键，连续输入不再逐帧全量渲染。 */
+    if (root.__vbClick) root.removeEventListener('click', root.__vbClick);
+    if (root.__vbInput) root.removeEventListener('input', root.__vbInput);
+    let searchTimer = null;
+    root.__vbClick = function (e) {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      const chip = t.closest('.filter-chip');
+      if (chip) { clearTimeout(searchTimer); filter = chip.dataset.fav; query = ''; shown = PAGE; render(); return; }
+      if (t.closest('#vocab-shuffle')) { clearTimeout(searchTimer); pool = shuffleWords(VOCAB_ALL); shown = PAGE; render(); toast('已换一批新单词'); return; }
+      if (t.closest('#vocab-more')) { clearTimeout(searchTimer); shown = Math.min(shown + PAGE, MAX_SHOWN); render(); return; }
+      const sp = t.closest('[data-speak]');
+      if (sp) { speak(sp.dataset.speak); return; }
+      const pron = t.closest('.pron-btn');
+      if (pron) { speakWord(pron.dataset.word, pron.dataset.accent); return; }
+      const mk = t.closest('[data-mark]');
+      if (mk) {
+        const w = mk.dataset.mark;
         S.vocabMarked[w] = markedTimes(w) + 1;
-        save(); toast(`「${w}」已记背 ${S.vocabMarked[w]} 次`); render(true);
-      }));
-      $$('[data-save]', root).forEach(b => b.addEventListener('click', () => {
-        const w = b.dataset.save;
+        save(); toast(`「${w}」已记背 ${S.vocabMarked[w]} 次`); render(true); return;
+      }
+      const sv = t.closest('[data-save]');
+      if (sv) {
+        const w = sv.dataset.save;
         if (S.vocabSaved.includes(w)) { S.vocabSaved = S.vocabSaved.filter(x => x !== w); toast('已从生词本移除'); }
         else { S.vocabSaved.push(w); toast('已加入生词本'); }
         save(); render(true);
-      }));
+      }
     };
+    root.__vbInput = function (e) {
+      if (!e.target || e.target.id !== 'vocab-q') return;
+      query = e.target.value; shown = PAGE;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => render(true), 120);
+    };
+    root.addEventListener('click', root.__vbClick);
+    root.addEventListener('input', root.__vbInput);
     render();
   };
   function highlightWord(sentence, word) {

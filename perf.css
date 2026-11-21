@@ -1,0 +1,53 @@
+/* ============================================================
+   砚边 · 移动端浏览流畅度优化层 (perf.css)
+   ------------------------------------------------------------
+   定位：只读式性能优化，不改任何 HTML 结构 / 页面文字 / 功能逻辑。
+   加载顺序：... → overlay.css → perf.css（最后加载，用于覆盖 tuned.css 的强制项）
+   桌面端保持原有霓虹玻璃视觉；以下降级仅在 ≤720px 的移动端生效。
+   ============================================================ */
+
+@media (max-width: 720px) {
+  /* 1) 背景不再 fixed。
+     tuned.css:74 用 !important 强制 fixed，导致滚动时每帧都要重算 3 层径向渐变光斑。
+     改为 scroll 后，浏览器可把背景作为静态层缓存， Notebook/手机滚动不再逐帧重绘。 */
+  body {
+    background-attachment: scroll, scroll, scroll, scroll !important;
+  }
+
+  /* 2) 关闭毛玻璃逐帧采样。
+     backdrop-filter 会让每个进入视口的卡片重新采样背景像素，是移动端掉帧主因。
+     卡片本身已有半透明纯色 --bg-card，去掉 blur 后视觉几乎无损（等同微信 X5 降级）。 */
+  *, *::before, *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* 3) 触屏没有真实 hover：去掉 hover 位移/阴影动画，避免滚动时误触发合成动画 */
+  .card--hover:hover,
+  .n2-card:hover,
+  .news-card:hover,
+  .music-card:hover,
+  .quick-card:hover {
+    transform: none !important;
+  }
+
+  /* 4) 长列表视口外卡片跳过布局与绘制（渐进增强：老内核自动忽略，不影响功能）。
+     auto <length> 会记住实测高度，避免滚动条跳动。 */
+  .grid > .card,
+  .n2-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 240px;
+  }
+
+  /* 5) 触控体验：惯性滚动 + 去掉点击高亮块 */
+  html { -webkit-text-size-adjust: 100%; }
+  .filter-bar, .n2-tabs { -webkit-overflow-scrolling: touch; }
+  button, .filter-chip, .pron-btn, .nav-item {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* 6) 尊重系统「减少动态效果」偏好：关掉外刊无图封面的持续漂移动画 */
+@media (prefers-reduced-motion: reduce) {
+  .n2-card__ph::before { animation: none !important; }
+}
