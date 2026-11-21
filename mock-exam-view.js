@@ -28,6 +28,8 @@
   }
   function writeState(s) { try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) {} }
   let ST = readState();
+  // 页面脚本执行即视为一次全新进入：不恢复任何进行中的试卷
+  if (ST.active) { ST.active = null; writeState(ST); }
 
   function examById(id) { return EXAMS.find(e => e.id === id); }
   function findQ(exam, qid) { return exam.questions.find(q => q.id === qid); }
@@ -38,7 +40,61 @@
   let viewTab = 'cet4'; // cet4 | cet6 | fav | done
 
   function stopTimer() { if (run && run.tick) { clearInterval(run.tick); run.tick = null; } }
-  function resetRun() { stopTimer(); run = null; ST.active = null; writeState(ST); }
+
+  // 听力播放器常驻在 body 上的独立容器，切题/切部分/答题卡跳转都不会重建它
+  let audioEl = null, audioDock = null;
+  function getAudio() {
+    if (!audioDock) {
+      audioDock = document.createElement('div');
+      audioDock.id = 'mockAudioDock';
+      audioDock.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none;';
+      document.body.appendChild(audioDock);
+    }
+    if (!audioEl) {
+      audioEl = document.createElement('audio');
+      audioEl.id = 'mockAudioEl';
+      audioEl.preload = 'none';
+      audioEl.playsInline = true;
+      audioEl.setAttribute('playsinline', '');
+      audioDock.appendChild(audioEl);
+      audioEl.playbackRate = 1;
+      audioEl.addEventListener('seeking', () => {
+        if (run && run.playing && typeof run.__playStart === 'number' && Math.abs(audioEl.currentTime - run.__playStart) > 2) {
+          audioEl.currentTime = run.__playStart;
+        }
+      });
+      audioEl.addEventListener('ended', () => {
+        if (!run) return;
+        run.playing = false;
+        syncAudioUI();
+        toast('听力播放结束');
+      });
+    }
+    return audioEl;
+  }
+  function stopAudio() {
+    if (!audioEl) return;
+    try { audioEl.pause(); } catch (e) {}
+    try { audioEl.currentTime = 0; } catch (e) {}
+    audioEl.removeAttribute('src');
+    try { audioEl.load(); } catch (e) {}
+    if (run) { run.playing = false; run.played = false; run.__playStart = 0; }
+  }
+  function syncAudioUI() {
+    if (!run) return;
+    const btn = document.querySelector('#view-mock #mockPlay');
+    if (!btn) return;
+    btn.disabled = !!run.played;
+    btn.textContent = run.played
+      ? (run.playing ? '▶ 正在播放…（仅此一次）' : '✓ 本科目听力已播放完毕')
+      : '▶ 播放听力（仅一次）';
+  }
+
+  // 彻底退出：停计时、停音频、清空答题进度与持久化 active
+  function hardReset() {
+    stopTimer(); stopAudio(); run = null; ST.active = null; writeState(ST);
+  }
+  function resetRun() { hardReset(); }
   function isRunning() { return !!(run && !run.submitted && run.startedAt); }
 
   // ---------------- 试卷列表页 ----------------
@@ -125,10 +181,12 @@
     const isListen = q.type === 'listening';
     let media = '';
     if (isListen && exam.audio) {
+      const label = run.played
+        ? (run.playing ? '▶ 正在播放…（仅此一次）' : '✓ 本科目听力已播放完毕')
+        : '▶ 播放听力（仅一次）';
       media = `<div class="mock-audio">
-        <button class="mock-play" id="mockPlay" ${run.played?'disabled':''}>${run.played?'✓ 本科目听力已播放':'▶ 播放听力（仅一次）'}</button>
-        <div class="mock-audio__tip">${run.played?'听力已播放完毕，不可再次播放。':'点击后需二次确认；播放开始后不可暂停、不可拖动、固定正常语速，且仅能播放一次。'}</div>
-        <audio id="mockAudioEl" src="${esc(exam.audio)}" preload="none" playsinline></audio>
+        <button class="mock-play" id="mockPlay" ${run.played?'disabled':''}>${label}</button>
+        <div class="mock-audio__tip">${run.played?'听力已播放/正在播放，不可再次播放。':'点击后需二次确认；播放开始后不可暂停、不可拖动、固定正常语速，且仅能播放一次。切题不会中断播放。'}</div>
       </div>`;
     }
     const passage = (!isListen && q.passage) ? `<details class="mock-passage"><summary>查看本文原文</summary><div>${esc(q.passage)}</div></details>` : '';
@@ -261,7 +319,11 @@
 
   function startExam(id) {
     const exam=examById(id); if(!exam) return;
-    if (isRunning() && run.examId!==id) { stopTimer(); }
+    // 切换试卷 / 重开同一试卷：先彻底退出当前试卷（含停止听力），防止旧进度或二次播放
+    if (isRunning()) {
+      if (run.examId !== id && !window.confirm('你正在模考中，切换试卷会退出当前试卷并重置答题进度。确定切换吗？')) return;
+      hardReset();
+    }
     const secs=sectionsOf(exam);
     run={ examId:id, answers:{}, remain:exam.minutes*60, total:exam.minutes*60, tick:null,
       startedAt:Date.now(), section:secs[0].key, curQid:secs[0].qs[0].id, played:false, playing:false, submitted:false };
@@ -280,24 +342,39 @@
     },1000);
   }
 
-  // ---------------- 听力播放（一次、不可暂停/拖拽/倍速、二次确认） ----------------
+  // ---------------- 听力播放（常驻播放器；一次、不可暂停/拖拽/倍速、二次确认） ----------------
   function bindAudio(root) {
-    const btn=$('#mockPlay', root), audio=$('#mockAudioEl', root);
-    if(!btn||!audio) return;
+    const btn=$('#mockPlay', root);
+    if(!btn || !run) return;
+    const exam=examById(run.examId);
+    if(!exam || !exam.audio) return;
+    const audio=getAudio();
+    const examId=run.examId;
+    if(audio.getAttribute('src')!==exam.audio){ audio.src=exam.audio; audio.load(); }
     audio.playbackRate=1;
-    // 禁用拖拽/暂停：屏蔽相关事件与原生控件
-    audio.addEventListener('seeking',()=>{ if(run.playing && Math.abs(audio.currentTime-run.__playStart)>2){ audio.currentTime=run.__playStart; } });
-    audio.controls=false;
+    syncAudioUI();
     btn.addEventListener('click',()=>{
-      if(run.played) return;
+      if(!run || run.examId!==examId || run.played) return;
       // 二次确认
       if(!window.confirm('听力音频仅可播放一次，播放后不可暂停、不可拖动进度、固定正常语速。确认现在开始播放吗？')) return;
-      run.played=true; run.playing=true; run.__playStart=audio.currentTime;
-      btn.disabled=true; btn.textContent='▶ 正在播放…（仅此一次）';
+      const start=audio.currentTime;
       audio.playbackRate=1;
       const p=audio.play();
-      if(p&&p.catch) p.catch(()=>toast('播放失败，请检查网络或点一次页面再试'));
-      audio.onended=()=>{ run.playing=false; btn.textContent='✓ 听力已播放完毕'; toast('听力播放结束'); };
+      if(p && p.then){
+        p.then(()=>{
+          if(!run || run.examId!==examId) return;
+          run.played=true; run.playing=true; run.__playStart=start;
+          syncAudioUI();
+        }).catch(()=>{
+          if(!run || run.examId!==examId) return;
+          run.played=false; run.playing=false;
+          syncAudioUI();
+          toast('播放失败，请检查网络后重试');
+        });
+      } else {
+        run.played=true; run.playing=true; run.__playStart=start;
+        syncAudioUI();
+      }
     });
   }
 
@@ -305,6 +382,7 @@
   function submitExam(auto) {
     if(!run||run.submitted) return;
     stopTimer(); run.submitted=true;
+    stopAudio(); // 交卷立即停止听力，避免结果页仍继续播放
     const exam=examById(run.examId);
     let right=0; const wrong=[];
     for(const q of exam.questions){
@@ -341,8 +419,8 @@
   // ---------------- 退出确认（切换功能=退出+重置） ----------------
   function confirmExitThen(cb) {
     if(!isRunning()){ cb(); return; }
-    if(window.confirm('你正在模考中，切换功能将退出本次模考并重置该试卷的答题进度。确定退出吗？')){
-      const id=run && run.examId; stopTimer(); run=null; ST.active=null; writeState(ST);
+    if(window.confirm('你正在模考中，切换功能将退出本次模考并重置该试卷的答题进度（听力会立即停止且不可再次播放）。确定退出吗？')){
+      const id=run && run.examId; hardReset();
       cb();
       if(id) toast('已退出模考，进度已重置');
     }
@@ -378,25 +456,42 @@
   }
 
   // ---------------- 注册渲染器 + 导航离开拦截 ----------------
-  function renderMock(){ if(run && !run.submitted){ paintExam(); } else { paintList(); } }
+  function renderMock(){
+    if(run && !run.submitted) paintExam();
+    else paintList();
+  }
   R.mock = renderMock;
   // app.js 的 init() 在 DOMContentLoaded 里调用 registerLateRenderers()，
-  // 会把 app2.js 的旧 R.mock 再覆盖一次；因此在 load 后重新夺回控制权。
-  function reclaim(){ R.mock = renderMock; }
+  // 会把 app2.js 的旧 R.mock 再覆盖一次。这里用只读访问器彻底锁死新版渲染器，
+  // 旧模块后续再怎么赋值都无效，杜绝"重新进入又是旧排版 / 还能继续答题"。
+  function reclaim(){
+    try {
+      Object.defineProperty(R, 'mock', { get: () => renderMock, set: () => {}, configurable: false });
+    } catch (e) { R.mock = renderMock; }
+    // 极端情况下若仍停在模考页，直接重置并回到新版列表，不渲染旧排版
+    if (API.currentView && API.currentView() === 'mock') { hardReset(); paintList(); }
+  }
   if (document.readyState === 'complete') setTimeout(reclaim, 0);
   else window.addEventListener('load', () => setTimeout(reclaim, 0));
   document.addEventListener('DOMContentLoaded', () => setTimeout(reclaim, 0));
 
-  // 捕获阶段拦截所有导航点击：做题中切换功能 → 确认
+  // 捕获阶段拦截所有会切换模块的点击：做题中切换功能 → 确认 + 彻底退出
   document.addEventListener('click', function(e){
-    const nav=e.target && e.target.closest && e.target.closest('.nav-item');
-    if(!nav) return;
-    if(nav.dataset.view==='mock') return;
+    const el = e.target && e.target.closest && e.target.closest('.nav-item, [data-goto], [data-go], #goMock, #startPathBtn');
+    if(!el) return;
+    const target = el.dataset.view || el.dataset.goto || el.dataset.go || (el.id==='goMock'?'mock':null);
+    if(!target || target==='mock') return;
     if(!isRunning()) return;
     e.preventDefault(); e.stopPropagation();
-    confirmExitThen(()=>{ if(API.navigate) API.navigate(nav.dataset.view); });
+    confirmExitThen(()=>{ if(API.navigate) API.navigate(target); });
   }, true);
 
-  // 浏览器关闭/刷新：做题中不保留进度
-  window.addEventListener('beforeunload', function(){ if(isRunning()){ ST.active=null; writeState(ST); } });
+  // 离开网站 / 刷新 / bfcache 恢复：彻底重置，绝不残留可继续答题的试卷或听力
+  window.addEventListener('beforeunload', hardReset);
+  window.addEventListener('pagehide', hardReset);
+  window.addEventListener('pageshow', function(e){
+    if(!e.persisted) return;
+    hardReset();
+    if(API.navigate) API.navigate('dashboard');
+  });
 })();

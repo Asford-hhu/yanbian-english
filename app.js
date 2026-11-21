@@ -641,7 +641,9 @@
     // 注册独立模块渲染器（音乐 / 外刊新闻）
     if (window.__registerMusicView) window.__registerMusicView();
     if (window.__registerNewsView) window.__registerNewsView();
-    navigate(S.lastView || 'dashboard', false);
+    // 每次从外部重新进入站点都回到概览首页，不恢复上次视图（尤其不恢复到模考答题页）
+    S.lastView = 'dashboard'; save();
+    navigate('dashboard', false);
   }
 
   function closeSpine() {
