@@ -2,45 +2,33 @@
 
   .quick-card > .card-orn {
     position: absolute;
-    right: 4px;
+    right: 7px;
     top: 50%;
-    transform: translateY(-48%);
-    width: 106px;
-    height: 106px;
+    transform: translateY(-46%);
+    width: 86px;
+    height: 86px;
     pointer-events: none;
     z-index: 0;
-    transition: color .4s cubic-bezier(.22,1,.36,1), filter .4s;
+    transition: color .4s cubic-bezier(.22,1,.36,1);
   }
   .quick-card > .card-orn .orn { width: 100%; height: 100%; display: block; }
   .quick-card > *:not(.card-orn) { position: relative; z-index: 1; }
 
-  /* 日间：叠层插画加深到 34%，配柔和投影，在浅底上也能一眼看清 */
-  .quick-card > .card-orn {
-    color: rgba(104, 80, 206, .34);
-    filter: drop-shadow(0 3px 10px rgba(104, 80, 206, .20));
-  }
-  .quick-card:hover > .card-orn {
-    color: rgba(104, 80, 206, .44);
-    filter: drop-shadow(0 4px 14px rgba(104, 80, 206, .28));
-  }
+  /* 只加深颜色：日间由 16% 提到 30%，不改位置/尺寸/文字排版 */
+  .quick-card > .card-orn { color: rgba(104, 80, 206, .30); }
+  .quick-card:hover > .card-orn { color: rgba(104, 80, 206, .36); }
 
-  /* 夜间：亮紫 54%，把插画从深色底里提出来，同时不压过正文 */
-  :root[data-theme="dark"] .quick-card > .card-orn {
-    color: rgba(216, 207, 255, .54);
-    filter: drop-shadow(0 0 10px rgba(167, 139, 250, .30));
-  }
-  :root[data-theme="dark"] .quick-card:hover > .card-orn {
-    color: rgba(226, 219, 255, .68);
-    filter: drop-shadow(0 0 14px rgba(167, 139, 250, .42));
-  }
+  /* 夜间由 26% 提到 46%，只提亮插画颜色 */
+  :root[data-theme="dark"] .quick-card > .card-orn { color: rgba(210, 203, 255, .46); }
+  :root[data-theme="dark"] .quick-card:hover > .card-orn { color: rgba(210, 203, 255, .54); }
 
   @media (max-width: 720px) {
-    /* 手机卡片只有 171×128，贴到标题右侧空档并适度缩小，仍保持清晰 */
+    /* 保持原有手机位置与尺寸 */
     .quick-card > .card-orn {
-      width: 72px;
-      height: 72px;
-      right: 2px;
-      top: 16px;
+      width: 58px;
+      height: 58px;
+      right: 6px;
+      top: 22px;
       transform: none;
     }
   }

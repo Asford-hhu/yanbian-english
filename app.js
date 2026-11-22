@@ -444,10 +444,10 @@
     $$('.quick-card', root).forEach(c => c.addEventListener('click', () => navigate(c.dataset.goto)));
   };
   function quickCard(view, title, desc, mark) {
-    return `<button class="card card--hover quick-card" data-goto="${view}">
+    return `<button class="card card--hover quick-card" data-goto="${view}" style="text-align:left;border-left:3px solid var(--accent)">
       <span class="card__label">${mark} · 功课</span>
       <h3>${title}</h3>
-      <div class="quick-card__desc">${desc}</div>
+      <div style="font-family:var(--font-serif);font-size:.85rem;color:var(--ink-faint)">${desc}</div>
     </button>`;
   }
 
