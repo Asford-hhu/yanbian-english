@@ -444,10 +444,10 @@
     $$('.quick-card', root).forEach(c => c.addEventListener('click', () => navigate(c.dataset.goto)));
   };
   function quickCard(view, title, desc, mark) {
-    return `<button class="card card--hover quick-card" data-goto="${view}" style="text-align:left;border-left:3px solid var(--accent)">
+    return `<button class="card card--hover quick-card" data-goto="${view}">
       <span class="card__label">${mark} · 功课</span>
       <h3>${title}</h3>
-      <div style="font-family:var(--font-serif);font-size:.85rem;color:var(--ink-faint)">${desc}</div>
+      <div class="quick-card__desc">${desc}</div>
     </button>`;
   }
 
@@ -482,7 +482,7 @@
   };
 
   /* ---------- 8. 阅读（整篇提交后统一判分） ---------- */
-  const READING_FILTERS = ['全部', '四级', '六级', '大英赛', '已做', '收藏'];
+  const READING_FILTERS = ['全部', '四级', '六级', '大英赛', '已完成', '收藏'];
   let readingState = { id: 'r1', answered: {}, level: '全部', submitted: null };
 
   // 与关键句生成脚本使用同一套分句规则，保证段落/句位标注准确
@@ -575,11 +575,11 @@
     const doneCount = DATA.reading.filter(a => !!readingDoneRecord(a)).length;
     const favCount = S.favReading.length;
     const chips = READING_FILTERS.map(l => {
-      const n = l === '已做' ? doneCount : l === '收藏' ? favCount : 0;
+      const n = l === '已完成' ? doneCount : l === '收藏' ? favCount : 0;
       return `<button class="filter-chip ${l === readingState.level ? 'is-active' : ''}" data-rlevel="${l}">${l}${n ? ` (${n})` : ''}</button>`;
     }).join('');
     const filtered = () => {
-      if (readingState.level === '已做') return DATA.reading.filter(a => !!readingDoneRecord(a));
+      if (readingState.level === '已完成') return DATA.reading.filter(a => !!readingDoneRecord(a));
       if (readingState.level === '收藏') return DATA.reading.filter(a => S.favReading.includes(a.id));
       return readingState.level === '全部' ? DATA.reading : DATA.reading.filter(a => a.level === readingState.level);
     };
@@ -601,12 +601,49 @@
         <select id="readingSelect"></select>
         <span class="tag" id="readingCount">共 0 篇</span>
       </div>
+      <div id="readingDoneList"></div>
       <div id="readingContent"></div>
     `;
+    // 「已完成」分区独立列出每篇大题，提供单篇移除；只删完成记录与作答记录，错题本不动
+    const renderDoneList = () => {
+      const zone = $('#readingDoneList', root);
+      if (!zone) return;
+      if (readingState.level !== '已完成') { zone.innerHTML = ''; return; }
+      const done = DATA.reading.filter(a => !!readingDoneRecord(a));
+      if (!done.length) {
+        zone.innerHTML = '<div class="card" style="margin-bottom:var(--sp-4)"><span style="font-family:var(--font-serif);color:var(--ink-soft)">还没有已完成的大题，做完一篇并提交后会出现在这里。</span></div>';
+        return;
+      }
+      zone.innerHTML = `<div class="card read-done-list" style="margin-bottom:var(--sp-4)">
+        <div class="card__label">已完成 · ${done.length} 篇</div>
+        <div class="read-done-grid">${done.map(a => {
+          const rec = readingDoneRecord(a);
+          return `<div class="read-done-item">
+            <button class="read-done-open" data-open-done="${a.id}"><b>${esc(a.title)}</b><span>${a.level} · ${rec.score}/${rec.total} 正确</span></button>
+            <button class="read-done-remove" data-remove-done="${a.id}" title="移除完成记录">移除</button>
+          </div>`;
+        }).join('')}</div>
+      </div>`;
+      $$('[data-open-done]', zone).forEach(b => b.addEventListener('click', () => {
+        readingState.id = b.dataset.openDone;
+        prepareReadingArticle();
+        const sel = $('#readingSelect'); if (sel) sel.value = readingState.id;
+        renderArticle();
+      }));
+      $$('[data-remove-done]', zone).forEach(b => b.addEventListener('click', () => {
+        const id = b.dataset.removeDone;
+        if (S.readingDone) delete S.readingDone[id];
+        const art = DATA.reading.find(a => a.id === id);
+        if (art) art.questions.forEach((_, qi) => { delete S.practice.reading[`${id}-${qi}`]; });
+        save();
+        toast('已移出完成记录，错题本保留');
+        RENDERERS.reading();
+      }));
+    };
     $$('[data-rlevel]', root).forEach(b => b.addEventListener('click', () => {
       readingState.level = b.dataset.rlevel;
       $$('[data-rlevel]', root).forEach(x => x.classList.toggle('is-active', x === b));
-      renderSelect(); prepareReadingArticle(); renderArticle();
+      renderSelect(); renderDoneList(); prepareReadingArticle(); renderArticle();
     }));
     const renderArticle = () => {
       const art = DATA.reading.find(a => a.id === readingState.id);
@@ -675,7 +712,7 @@
         S.readingDone = S.readingDone || {};
         S.readingDone[art.id] = { answers, score, total: art.questions.length, ts };
         readingState.submitted = S.readingDone[art.id];
-        save(); renderArticle(); toast(`已提交 · 答对 ${score} / ${art.questions.length} 题`);
+        save(); renderDoneList(); renderArticle(); toast(`已提交 · 答对 ${score} / ${art.questions.length} 题`);
       });
       $('#readRedo')?.addEventListener('click', () => {
         readingState.submitted = null;
@@ -691,6 +728,7 @@
       });
     };
     renderSelect();
+    renderDoneList();
     renderArticle();
   };
 
@@ -704,10 +742,15 @@
     const root = $('#view-writing');
     const cats = ['全部', ...new Set(DATA.writing.map(x => x.cat))];
     let activeCat = '全部';
+    let favOnly = false;
     const render = () => {
-      const list = activeCat === '全部' ? DATA.writing : DATA.writing.filter(x => x.cat === activeCat);
+      const base = favOnly ? DATA.writing.filter(x => S.favExpr.includes(x.en)) : DATA.writing;
+      const list = activeCat === '全部' ? base : base.filter(x => x.cat === activeCat);
+      const scopeChips = `
+        <button class="filter-chip ${!favOnly ? 'is-active' : ''}" data-wscope="all">全部表达</button>
+        <button class="filter-chip ${favOnly ? 'is-active' : ''}" data-wscope="fav">我的收藏 (${S.favExpr.length})</button>`;
       const chips = cats.map(c => `<button class="filter-chip ${c === activeCat ? 'is-active' : ''}" data-cat="${c}">${c}</button>`).join('');
-      const cards = list.map((x, i) => {
+      const cards = list.map(x => {
         const fav = S.favExpr.includes(x.en);
         return `<div class="card card--hover expr-card">
           <span class="expr-card__cat tag tag--accent">${x.cat}</span>
@@ -721,12 +764,19 @@
         </div>`;
       }).join('');
       root.innerHTML = `
-        <div style="font-family:var(--font-serif);color:var(--ink-soft);margin-bottom:var(--sp-4)">按功能分类的表达库。点 ☆ 收藏到你的表达夹，点朗读听发音。<b>已收藏 ${S.favExpr.length} 条</b>。</div>
-        <div class="filter-bar">${chips}</div>
-        <div id="favZone"></div>
-        <div class="grid grid--2">${cards}</div>
+        <div style="font-family:var(--font-serif);color:var(--ink-soft);margin-bottom:var(--sp-4)">按功能分类的表达库。点 ☆ 收藏到你的表达夹，点朗读听发音。<b>已收藏 ${S.favExpr.length} 条</b>，可在「我的收藏」分区单独查看。</div>
+        <div class="filter-bar">${scopeChips}</div>
+        ${favOnly ? '' : `<div class="filter-bar">${chips}</div>`}
+        ${list.length
+          ? `<div class="grid grid--2">${cards}</div>`
+          : `<div class="empty"><span class="empty__mark">∅</span><p>${favOnly ? '还没有收藏表达，点卡片右下角的 ☆ 收藏后会出现在这里。' : '该分类暂无表达，换个类别看看。'}</p></div>`}
       `;
-      $$('.filter-chip', root).forEach(b => b.addEventListener('click', () => { activeCat = b.dataset.cat; render(); }));
+      $$('[data-wscope]', root).forEach(b => b.addEventListener('click', () => {
+        favOnly = b.dataset.wscope === 'fav';
+        if (favOnly) activeCat = '全部';
+        render();
+      }));
+      $$('[data-cat]', root).forEach(b => b.addEventListener('click', () => { activeCat = b.dataset.cat; render(); }));
       $$('.fav-btn', root).forEach(b => b.addEventListener('click', () => {
         const en = b.dataset.fav;
         if (S.favExpr.includes(en)) { S.favExpr = S.favExpr.filter(x => x !== en); toast('已取消收藏'); }
@@ -734,16 +784,6 @@
         save(); render();
       }));
       $$('.speak-btn', root).forEach(b => b.addEventListener('click', () => speak(b.dataset.speak)));
-      renderFavZone();
-    };
-    const renderFavZone = () => {
-      const zone = $('#favZone', root);
-      if (!zone) return;
-      if (!S.favExpr.length) { zone.innerHTML = ''; return; }
-      zone.innerHTML = `<div class="card" style="margin-bottom:var(--sp-5);border-left:3px solid var(--pine)">
-        <div class="card__label">My Collection · 我的表达夹</div>
-        <ul style="font-family:var(--font-serif);font-size:.9rem;margin:0;padding-left:1.2rem;line-height:2">${S.favExpr.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
-      </div>`;
     };
     render();
   };

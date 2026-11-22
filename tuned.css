@@ -452,3 +452,52 @@ body { color: var(--text-main); }
   .read-fav, .listen-fav { width: 32px; height: 32px; font-size: 1rem; }
   .read-tag { font-size: .64rem; margin-right: 4px; padding: 1px 5px; }
 }
+
+/* ---------- 概览「从这里继续」四张入口卡：更亮的插图与主题化底色 ---------- */
+.quick-card {
+  position: relative; overflow: hidden; min-height: 132px;
+  border: 1px solid var(--border-glow) !important;
+  border-left: 4px solid var(--accent) !important;
+  background: linear-gradient(135deg, var(--paper) 0%, var(--accent-wash) 100%) !important;
+  box-shadow: var(--glow-soft);
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+}
+.quick-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(124, 92, 246, .22); }
+.quick-card::after {
+  content: ''; position: absolute; right: -38px; top: -42px;
+  width: 124px; height: 124px; border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-wash), transparent 70%);
+  pointer-events: none;
+}
+.quick-card h3 { margin: 7px 0 5px; font-size: 1.14rem; color: var(--text-main); }
+.quick-card__desc { font-family: var(--font-serif); font-size: .86rem; color: var(--text-secondary) !important; font-weight: 500; }
+:root[data-theme="dark"] .quick-card {
+  background: linear-gradient(135deg, rgba(255,255,255,.06) 0%, var(--accent-wash) 100%) !important;
+  border-color: rgba(167, 139, 250, .40) !important;
+  border-left-color: #a78bfa !important;
+}
+:root[data-theme="dark"] .quick-card h3 { color: #f5f2ff; }
+:root[data-theme="dark"] .quick-card__desc { color: #ded7f2 !important; }
+
+/* ---------- 阅读「已完成」分区的单篇移除 ---------- */
+.read-done-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.read-done-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border: 1px solid var(--border-glow); border-radius: var(--radius); background: var(--paper-2);
+}
+.read-done-open {
+  flex: 1 1 auto; min-width: 0; text-align: left; cursor: pointer;
+  color: var(--text-main); background: transparent; border: 0; padding: 0;
+}
+.read-done-open b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
+.read-done-open span { display: block; font-size: .74rem; color: var(--text-secondary); margin-top: 2px; }
+.read-done-remove {
+  flex: 0 0 auto; cursor: pointer; padding: 4px 9px; border-radius: 999px;
+  font-size: .74rem; color: var(--danger); background: transparent;
+  border: 1px solid var(--danger); transition: background .2s;
+}
+.read-done-remove:hover { background: var(--accent-wash); }
+@media (max-width: 560px) {
+  .quick-card { min-height: 120px; }
+  .quick-card h3 { font-size: 1rem !important; }
+}
