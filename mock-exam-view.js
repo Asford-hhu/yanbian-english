@@ -92,6 +92,7 @@
 
   // 彻底退出：停计时、停音频、清空答题进度与持久化 active
   function hardReset() {
+    finishConfirm(false); // 关闭任何待确认弹窗，防止 bfcache 恢复后残留
     stopTimer(); stopAudio(); run = null; ST.active = null; writeState(ST);
   }
   function resetRun() { hardReset(); }
