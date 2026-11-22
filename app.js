@@ -749,10 +749,17 @@
   };
 
   /* ---------- 注册其余渲染器（见 app2 追加） ---------- */
-  window.__YANBIAN__ = { $, $$, esc, getS: () => S, save, toast, speak, speakWord, addMistake, RENDERERS, navigate, streak, DATA, applyTheme, initVoices, updateChrome, currentView: () => currentView };
+  window.__YANBIAN__ = { $, $$, esc, getS: () => S, save, toast, speak, speakWord, addMistake, RENDERERS, navigate, streak, DATA, applyTheme, initVoices, updateChrome,
+    currentView: () => currentView,
+    // 后置数据/模块脚本加载完成后调用：只重绘当前视图，不重复绑定全局事件
+    refresh: () => { if (RENDERERS[currentView]) RENDERERS[currentView](); }
+  };
 
   /* ---------- 10. 启动 ---------- */
+  let inited = false;
   function init() {
+    if (inited) return;
+    inited = true;
     applyTheme();
     initVoices();
     updateChrome();
@@ -773,7 +780,10 @@
     $('#importFile').addEventListener('change', importData);
     $('#resetBtn').addEventListener('click', resetData);
     // 注册后半模块渲染器（app2.js）
-    if (window.__registerLateRenderers) window.__registerLateRenderers();
+    if (window.__registerLateRenderers && !window.__YANBIAN_LATE_READY__) {
+      window.__YANBIAN_LATE_READY__ = true;
+      window.__registerLateRenderers();
+    }
     // 注册独立模块渲染器（音乐 / 外刊新闻）
     if (window.__registerMusicView) window.__registerMusicView();
     if (window.__registerNewsView) window.__registerNewsView();
@@ -835,5 +845,8 @@
     navigate('dashboard'); updateChrome(); toast('数据已清空');
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  // 本脚本带 defer，执行时 DOM 已解析完毕：立即渲染首屏，不等后面的大体积数据脚本。
+  // 这样手机弱网下也能先看到概览页，而不是等 5MB 词库/外刊数据全部下载完才白屏结束。
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+  else init();
 })();

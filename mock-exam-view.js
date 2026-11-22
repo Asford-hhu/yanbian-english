@@ -563,4 +563,6 @@
     hardReset();
     if(API.navigate) API.navigate('dashboard');
   });
+  // 后置脚本到达时补绘当前视图（手机弱网下用户可能已先进入概览/其他模块）
+  if (API.refresh) API.refresh();
 })();

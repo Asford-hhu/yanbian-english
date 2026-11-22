@@ -1703,3 +1703,5 @@ window.YANBIAN_READING_EXTRA = [
 if (typeof DATA !== 'undefined' && DATA.reading) {
   DATA.reading = DATA.reading.concat(window.YANBIAN_READING_EXTRA);
 }
+// app.js 先渲染首屏；阅读扩展包到达后若用户已在阅读页，补绘一次
+if (window.__YANBIAN__ && window.__YANBIAN__.refresh) window.__YANBIAN__.refresh();

@@ -691,4 +691,10 @@
   };
 
   window.__registerLateRenderers = registerLateRenderers;
+  // app.js 现在先于大体积数据脚本执行首屏渲染；本脚本落到时自行注册并刷新当前视图
+  if (window.__YANBIAN__ && !window.__YANBIAN_LATE_READY__) {
+    window.__YANBIAN_LATE_READY__ = true;
+    registerLateRenderers();
+    if (window.__YANBIAN__.refresh) window.__YANBIAN__.refresh();
+  }
 })();

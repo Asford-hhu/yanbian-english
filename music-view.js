@@ -147,4 +147,9 @@
   };
 
   window.__registerMusicView = registerMusicView;
+  if (window.__YANBIAN__ && !window.__YANBIAN_MUSIC_READY__) {
+    window.__YANBIAN_MUSIC_READY__ = true;
+    registerMusicView();
+    if (window.__YANBIAN__.refresh) window.__YANBIAN__.refresh();
+  }
 })();

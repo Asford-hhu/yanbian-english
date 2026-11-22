@@ -214,12 +214,14 @@
 <!-- 全局提示 -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<!-- 全部 defer：脚本并行下载、按顺序在 DOMContentLoaded 前执行完，不阻塞 HTML 解析与首屏绘制。
-     data 在前、app 在后、各 register 就绪后再由 app.js 的 init() 统一挂载，顺序与功能完全不变。 -->
+<!-- 首屏优先：data.js + 主题 + app.js 先到位并立即渲染概览；词库/外刊/模考等大脚本随后 defer 加载，
+     各自到位后自注册渲染器并只补绘当前视图，手机弱网不再等全部数据下载完才出现内容。 -->
 <script src="data.js?v=20261128b" defer></script>
+<script src="theme-mode.js?v=20261122o" defer></script>
+<script src="app.js?v=20261122o" defer></script>
 <script src="vocab-data.js?v=20261125a" defer></script>
 <script src="vocab-cet.js?v=20261125a" defer></script>
-<script src="reading-extra.js?v=20261125a" defer></script>
+<script src="reading-extra.js?v=20261122o" defer></script>
 <script src="writing-extra.js?v=20261125a" defer></script>
 <script src="listening-extra.js?v=20261125a" defer></script>
 <script src="listening-extra2.js?v=20261128b" defer></script>
@@ -229,12 +231,10 @@
 <script src="mock-exam-data.js?v=20261122a" defer></script>
 <script src="keypoints-data.js?v=20261122m" defer></script>
 <script src="reading-keypoints.js?v=20261122n" defer></script>
-<script src="app.js?v=20261122n" defer></script>
-<script src="app2.js?v=20261122n" defer></script>
-<script src="music-view.js?v=20261125a" defer></script>
+<script src="app2.js?v=20261122o" defer></script>
+<script src="music-view.js?v=20261122o" defer></script>
 <script src="news-view.js?v=20261126b" defer></script>
-<script src="mock-exam-view.js?v=20261122j" defer></script>
-<script src="theme-mode.js" defer></script>
+<script src="mock-exam-view.js?v=20261122o" defer></script>
 <script src="picker.js?v=20261127a" defer></script>
 <script src="overlay.js?v=20261128a" defer></script>
 </body>

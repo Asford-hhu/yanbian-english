@@ -340,4 +340,9 @@
   };
 
   window.__registerNewsView = registerNewsView;
+  if (window.__YANBIAN__ && !window.__YANBIAN_NEWS_READY__) {
+    window.__YANBIAN_NEWS_READY__ = true;
+    registerNewsView();
+    if (window.__YANBIAN__.refresh) window.__YANBIAN__.refresh();
+  }
 })();
