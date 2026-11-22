@@ -53,10 +53,10 @@
 .res-q__why { margin-top: 8px; padding: 10px; border-radius: var(--radius); background: var(--accent-wash); font-size: .84rem; line-height: 1.8; color: var(--text-secondary); white-space: pre-wrap; }
 
 /* 二次确认弹窗：沿用站点玻璃卡片 / 赭石强调色，始终只有「取消 + 确定」两枚按钮 */
-.mock-confirm { z-index: 120; }
+.mock-confirm { z-index: 120; padding: var(--sp-3); }
 .mock-confirm__card {
-  width: min(420px, 100%);
-  padding: var(--sp-5);
+  width: min(480px, 100%);
+  padding: var(--sp-6);
   position: relative;
   overflow: hidden;
   /* 用不透明主题底色，彻底挡住底层题干；边框/发光仍沿用玻璃主题 */
@@ -68,11 +68,12 @@
   background: var(--grad-active);
 }
 .mock-confirm__msg {
-  margin: 0 0 var(--sp-5) !important;
-  text-align: left; line-height: 1.8; font-size: .92rem; color: var(--text-main);
+  margin: 0 0 var(--sp-6) !important;
+  text-align: left; line-height: 1.95; font-size: .9rem; color: var(--text-main);
+  letter-spacing: .01em;
 }
 .mock-confirm__actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
-.mock-confirm__actions .btn { justify-content: center; text-align: center; padding: 11px 12px; }
+.mock-confirm__actions .btn { justify-content: center; text-align: center; padding: 12px 16px; min-height: 46px; }
 
 @media (max-width: 860px) {
   .mock-layout { grid-template-columns: 1fr; }
@@ -84,5 +85,7 @@
   .mock-score__num { font-size: 1.7rem; }
   .mock-timer__time { font-size: 1.6rem; }
   .as-grid { grid-template-columns: repeat(6, 1fr); }
-  .mock-confirm__card { padding: var(--sp-4); }
+  .mock-confirm__card { padding: var(--sp-5) var(--sp-4); }
+  .mock-confirm__msg { line-height: 1.85; }
+  .mock-confirm__actions .btn { min-height: 44px; }
 }
