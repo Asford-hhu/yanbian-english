@@ -233,18 +233,47 @@
   R.listening = function () {
     const root = $('#view-listening');
     const S = getS();
-    let diffFilter = '全部';
-    const visibleList = () => diffFilter === '全部' ? DATA.listening : DATA.listening.filter(l => getDiff(l) === diffFilter);
+    let listFilter = '全部';
+    const isDone = (l) => (l.blanks || []).every((b, i) => {
+      const r = S.practice.listening[`${l.id}-b${i}`];
+      return r && r.chosen !== undefined && String(r.chosen).trim() !== '';
+    });
+    const visibleList = () => {
+      if (listFilter === '已完成') return DATA.listening.filter(isDone);
+      if (listFilter === '收藏') return DATA.listening.filter(l => (S.favListening || []).includes(l.id));
+      return listFilter === '全部' ? DATA.listening : DATA.listening.filter(l => getDiff(l) === listFilter);
+    };
     let cur = DATA.listening[0];
     let revealed = false;
     let seeking = false;
 
     const render = () => {
       const list = visibleList();
-      if (list.length && !list.includes(cur)) cur = list[0];
+      const counts = { 已完成: DATA.listening.filter(isDone).length, 收藏: (S.favListening || []).length };
+      const filterChips = ['全部','易','中','难','已完成','收藏'].map(d =>
+        `<button class="filter-chip ${d === listFilter ? 'is-active' : ''}" data-ldiff="${d}">${d}${counts[d] ? ` (${counts[d]})` : ''}</button>`).join('');
+      const bindFilters = () => {
+        $$('[data-ldiff]', root).forEach(b => b.addEventListener('click', () => {
+          listFilter = b.dataset.ldiff;
+          const nl = visibleList();
+          if (nl.length && !nl.includes(cur)) { stopListenAudio(); cur = nl[0]; }
+          revealed = false; render();
+        }));
+      };
+      if (!list.length) {
+        root.innerHTML = `
+          <div class="filter-bar">
+            <span style="font-family:var(--font-serif);font-size:.9rem;color:var(--ink-soft)">按分类查找：</span>
+            ${filterChips}
+            <span class="tag tag--pine">共 0 篇</span>
+          </div>
+          <div class="empty"><span class="empty__mark">∅</span><p>该分区暂无材料，换个分类看看。</p></div>`;
+        bindFilters();
+        return;
+      }
+      if (!list.includes(cur)) { stopListenAudio(); cur = list[0]; }
       const meta = LISTEN_AUDIO()[cur.id];
       const tl = (meta && meta.lines) || [];
-      const diffChips = ['全部','易','中','难'].map(d => `<button class="filter-chip ${d === diffFilter ? 'is-active' : ''}" data-ldiff="${d}">${d === '全部' ? '全部' : d}</button>`).join('');
       const blanksHtml = cur.blanks.map((b, i) => {
         const key = `${cur.id}-b${i}`;
         const val = S.practice.listening[key]?.chosen || '';
@@ -266,12 +295,12 @@
       }).join('');
       root.innerHTML = `
         <div class="filter-bar">
-          <span style="font-family:var(--font-serif);font-size:.9rem;color:var(--ink-soft)">按难度查找：</span>
-          ${diffChips}
+          <span style="font-family:var(--font-serif);font-size:.9rem;color:var(--ink-soft)">按分类查找：</span>
+          ${filterChips}
           <span class="tag tag--pine">共 ${list.length} 篇</span>
         </div>
         <div class="filter-bar">
-          ${list.map(l => `<button class="filter-chip ${l.id === cur.id ? 'is-active' : ''}" data-l="${DATA.listening.indexOf(l)}"><span class="tag ${DIFF_CLS[getDiff(l)]}" style="margin-right:5px;padding:1px 6px;font-size:.7rem">${getDiff(l)}</span>${esc(l.title)}</button>`).join('')}
+          ${list.map(l => `<button class="filter-chip ${l.id === cur.id ? 'is-active' : ''}" data-l="${DATA.listening.indexOf(l)}">${isDone(l) ? '<span class="done-dot">✓</span>' : ''}<span class="tag ${DIFF_CLS[getDiff(l)]}" style="margin-right:5px;padding:1px 6px;font-size:.7rem">${getDiff(l)}</span>${esc(l.title)}</button>`).join('')}
         </div>
         <div class="listen-panel">
           <div class="listen-panel__top">
@@ -290,7 +319,10 @@
           <div class="transcript">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-3);gap:var(--sp-3);flex-wrap:wrap">
               <strong style="font-family:var(--font-serif)">${esc(cur.title)}</strong>
-              <button class="btn btn--sm" id="toggleTranscript">${revealed ? '隐藏原文' : '显示原文'}</button>
+              <div style="display:flex;align-items:center;gap:var(--sp-2)">
+                <button class="listen-fav ${(S.favListening || []).includes(cur.id) ? 'is-fav' : ''}" data-lfav="${cur.id}" title="收藏材料" aria-label="收藏材料">${(S.favListening || []).includes(cur.id) ? '★' : '☆'}</button>
+                <button class="btn btn--sm" id="toggleTranscript">${revealed ? '隐藏原文' : '显示原文'}</button>
+              </div>
             </div>
             <div id="transcriptText" style="${revealed ? '' : 'filter:blur(5px);user-select:none;cursor:pointer'}" title="${revealed ? '' : '点击显示原文'}">
               ${lineHtml}
@@ -334,12 +366,7 @@
         else laRaf = 0;
       };
 
-      $$('[data-ldiff]', root).forEach(b => b.addEventListener('click', () => {
-        diffFilter = b.dataset.ldiff;
-        const nl = visibleList();
-        if (nl.length && !nl.includes(cur)) { stopListenAudio(); cur = nl[0]; }
-        render();
-      }));
+      bindFilters();
       $$('[data-l]', root).forEach(b => b.addEventListener('click', () => {
         const next = DATA.listening[+b.dataset.l];
         if (next && next.id !== cur.id) { stopListenAudio(); cur = next; }
@@ -380,6 +407,14 @@
         render();
       }));
       $('#toggleTranscript').addEventListener('click', () => { revealed = !revealed; render(); });
+      $('[data-lfav]', root)?.addEventListener('click', () => {
+        const id = $('[data-lfav]', root).dataset.lfav;
+        S.favListening = S.favListening || [];
+        if (S.favListening.includes(id)) { S.favListening = S.favListening.filter(x => x !== id); toast('已取消收藏'); }
+        else { S.favListening.push(id); toast('已收藏材料'); }
+        if (listFilter === '收藏' && !S.favListening.includes(id)) listFilter = '全部';
+        save(); render();
+      });
       const tt = $('#transcriptText');
       if (!revealed) tt.addEventListener('click', () => { revealed = true; render(); });
       $('#checkBlanks').addEventListener('click', () => {

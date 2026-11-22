@@ -414,3 +414,41 @@ body { color: var(--text-main); }
 
 
 
+
+/* ---------- 阅读整篇提交 / 收藏 / 原文标注 ---------- */
+.passage__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.passage__head .passage__meta { flex: 1 1 auto; min-width: 0; }
+.read-fav, .listen-fav {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer; line-height: 1;
+  font-size: 1.1rem; color: var(--accent);
+  background: var(--paper-2); border: 1px solid var(--border-glow);
+  box-shadow: var(--glow-soft); transition: transform .2s var(--ease), background .2s;
+}
+.read-fav:hover, .listen-fav:hover { transform: scale(1.08); background: var(--accent-wash); }
+.read-fav.is-fav, .listen-fav.is-fav { color: #f59e0b; background: var(--accent-wash); }
+.read-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-top: var(--sp-4);
+}
+.read-score { font-family: var(--font-serif); font-size: .88rem; color: var(--text-secondary); }
+.read-sent {
+  background: linear-gradient(transparent 62%, var(--accent-wash) 0);
+  border-radius: 4px; padding: 1px 2px;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.read-tag {
+  display: inline-block; margin-right: 6px; padding: 1px 7px;
+  border-radius: 999px; background: var(--accent); color: var(--paper);
+  font-family: var(--font-display); font-size: .7rem; line-height: 1.6;
+  white-space: nowrap; vertical-align: baseline;
+}
+.read-kw {
+  color: var(--accent-ink); font-weight: 700;
+  background: transparent; padding: 0 1px; border-bottom: 2px solid var(--accent);
+}
+.done-dot { color: var(--success); font-weight: 700; margin-right: 4px; }
+@media (max-width: 560px) {
+  .read-fav, .listen-fav { width: 32px; height: 32px; font-size: 1rem; }
+  .read-tag { font-size: .64rem; margin-right: 4px; padding: 1px 5px; }
+}

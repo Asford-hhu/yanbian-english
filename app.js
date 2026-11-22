@@ -33,6 +33,9 @@
     vocabSaved: [],            // 生词本 [word]
     vocabMarked: {},           // 已记背 { word: 次数 }，每次点标记 +1
     favExpr: [],               // 收藏表达 [en]
+    favReading: [],            // 收藏阅读文章 [articleId]
+    favListening: [],          // 收藏听说材料 [itemId]
+    readingDone: {},           // 阅读整篇提交记录 {articleId: {answers, score, total, ts}}
     mistakes: [],              // [{id, src, q, opts, answer, chosen, why, ts}]
     mockRuns: [],              // [{ts, score, total, seconds}]
     lastView: 'dashboard'
@@ -44,8 +47,12 @@
       if (!raw) return clone(DEFAULT_STATE);
       const parsed = JSON.parse(raw);
       // 合并默认结构（兼容旧数据）
-      return { ...clone(DEFAULT_STATE), ...parsed,
+      const state = { ...clone(DEFAULT_STATE), ...parsed,
         practice: { ...DEFAULT_STATE.practice, ...(parsed.practice || {}) } };
+      if (!Array.isArray(state.favReading)) state.favReading = [];
+      if (!Array.isArray(state.favListening)) state.favListening = [];
+      if (!state.readingDone || typeof state.readingDone !== 'object' || Array.isArray(state.readingDone)) state.readingDone = {};
+      return state;
     } catch (e) {
       return clone(DEFAULT_STATE);
     }
@@ -422,7 +429,7 @@
         <div class="stat-cell"><div class="stat-cell__num">${totalAnswered()}</div><div class="stat-cell__label">累计答题</div></div>
         <div class="stat-cell"><div class="stat-cell__num">${correctRate()}%</div><div class="stat-cell__label">正确率</div></div>
         <div class="stat-cell"><div class="stat-cell__num">${S.vocabSaved.length}</div><div class="stat-cell__label">生词本</div></div>
-        <div class="stat-cell"><div class="stat-cell__num">${S.favExpr.length + S.mistakes.length}</div><div class="stat-cell__label">收藏 + 错题</div></div>
+        <div class="stat-cell"><div class="stat-cell__num">${S.favExpr.length + (S.favReading || []).length + (S.favListening || []).length + S.mistakes.length}</div><div class="stat-cell__label">收藏 + 错题</div></div>
       </div>
 
       <div class="sec-head"><span class="sec-head__no">§</span><h2>从这里继续</h2><span class="sec-head__note">Choose where to pick up</span></div>
@@ -474,87 +481,216 @@
     $('#startPathBtn').addEventListener('click', () => navigate('vocab'));
   };
 
-  /* ---------- 8. 阅读 ---------- */
-  let readingState = { id: 'r1', answered: {}, level: '全部' };
+  /* ---------- 8. 阅读（整篇提交后统一判分） ---------- */
+  const READING_FILTERS = ['全部', '四级', '六级', '大英赛', '已做', '收藏'];
+  let readingState = { id: 'r1', answered: {}, level: '全部', submitted: null };
+
+  // 与关键句生成脚本使用同一套分句规则，保证段落/句位标注准确
+  function splitReadingSentences(para) {
+    const out = [];
+    const re = /[^.!?]+(?:[.!?]+["”]?|$)/g;
+    let m;
+    while ((m = re.exec(para))) {
+      const s = m[0].trim();
+      if (s) out.push(s);
+    }
+    return out.length ? out : [para.trim()];
+  }
+
+  // 兼容旧数据：完整作答过的文章也算「已做」
+  function readingDoneRecord(art) {
+    const rec = S.readingDone && S.readingDone[art.id];
+    if (rec && rec.answers) return rec;
+    const answers = {};
+    let all = true;
+    art.questions.forEach((q, qi) => {
+      const r = S.practice.reading[`${art.id}-${qi}`];
+      if (r && r.chosen !== undefined) answers[qi] = r.chosen;
+      else all = false;
+    });
+    if (!all) return null;
+    const score = art.questions.filter((q, qi) => answers[qi] === q.answer).length;
+    return { answers, score, total: art.questions.length, ts: 0 };
+  }
+
+  function prepareReadingArticle() {
+    const art = DATA.reading.find(a => a.id === readingState.id);
+    const rec = art && readingDoneRecord(art);
+    readingState.submitted = rec || null;
+    readingState.answered = rec ? { ...rec.answers } : {};
+  }
+
+  // 提交后在原文逐句标注题号，并把对应关键词加粗高亮；未提交时原文保持干净
+  function readingPassageHtml(art, submitted) {
+    const keyMap = window.YANBIAN_READING_KEYS || {};
+    const marks = {};
+    if (submitted) {
+      art.questions.forEach((q, qi) => {
+        const k = keyMap[`${art.id}-${qi}`];
+        if (!k || !Number.isInteger(k.p) || !Number.isInteger(k.s)) return;
+        if (!marks[k.p]) marks[k.p] = {};
+        if (!marks[k.p][k.s]) marks[k.p][k.s] = [];
+        marks[k.p][k.s].push({ qi, kw: k.kw || [] });
+      });
+    }
+    return art.body.map((para, pi) => {
+      const sents = splitReadingSentences(para);
+      const html = sents.map((sent, si) => {
+        const entries = marks[pi] && marks[pi][si];
+        if (!entries || !entries.length) return esc(sent);
+        const lower = sent.toLowerCase();
+        const ranges = [];
+        entries.forEach(e => (e.kw || []).forEach(w => {
+          const text = String(w);
+          const idx = lower.indexOf(text.toLowerCase());
+          if (idx >= 0) ranges.push({ start: idx, end: idx + text.length, qi: e.qi + 1 });
+        }));
+        ranges.sort((a, b) => a.start - b.start);
+        const merged = [];
+        ranges.forEach(r => {
+          const last = merged[merged.length - 1];
+          if (last && r.start < last.end) {
+            last.end = Math.max(last.end, r.end);
+            if (!last.qs.includes(r.qi)) last.qs.push(r.qi);
+          } else merged.push({ start: r.start, end: r.end, qs: [r.qi] });
+        });
+        let body = '', pos = 0;
+        merged.forEach(r => {
+          body += esc(sent.slice(pos, r.start));
+          const tip = r.qs.map(n => `第${n}题关键词`).join(' / ');
+          body += `<mark class="read-kw" title="${esc(tip)}">${esc(sent.slice(r.start, r.end))}</mark>`;
+          pos = r.end;
+        });
+        body += esc(sent.slice(pos));
+        const labels = [...new Set(entries.map(e => e.qi + 1))].sort((a, b) => a - b).map(n => `第${n}题`).join(' · ');
+        return `<span class="read-sent"><span class="read-tag">${labels}</span>${body}</span>`;
+      }).join(' ');
+      return `<p>${html}</p>`;
+    }).join('');
+  }
+
   RENDERERS.reading = function () {
     const root = $('#view-reading');
-    const levels = ['全部', '四级', '六级', '大英赛'];
-    const levelChips = levels.map(l => `<button class="filter-chip ${l === readingState.level ? 'is-active' : ''}" data-rlevel="${l}">${l}</button>`).join('');
-    const filtered = () => readingState.level === '全部' ? DATA.reading : DATA.reading.filter(a => a.level === readingState.level);
+    prepareReadingArticle();
+    const doneCount = DATA.reading.filter(a => !!readingDoneRecord(a)).length;
+    const favCount = S.favReading.length;
+    const chips = READING_FILTERS.map(l => {
+      const n = l === '已做' ? doneCount : l === '收藏' ? favCount : 0;
+      return `<button class="filter-chip ${l === readingState.level ? 'is-active' : ''}" data-rlevel="${l}">${l}${n ? ` (${n})` : ''}</button>`;
+    }).join('');
+    const filtered = () => {
+      if (readingState.level === '已做') return DATA.reading.filter(a => !!readingDoneRecord(a));
+      if (readingState.level === '收藏') return DATA.reading.filter(a => S.favReading.includes(a.id));
+      return readingState.level === '全部' ? DATA.reading : DATA.reading.filter(a => a.level === readingState.level);
+    };
     const renderSelect = () => {
       const list = filtered();
       if (list.length && !list.some(a => a.id === readingState.id)) readingState.id = list[0].id;
       const opts = list.map(a => `<option value="${a.id}" ${a.id === readingState.id ? 'selected' : ''}>${esc(a.title)} · ${a.level}</option>`).join('');
       const sel = $('#readingSelect');
-      if (sel) sel.innerHTML = opts || '<option value="">该分类暂无文章</option>';
+      if (sel) sel.innerHTML = opts || '<option value="">该分区暂无文章</option>';
       const cnt = $('#readingCount'); if (cnt) cnt.textContent = '共 ' + list.length + ' 篇';
     };
-    const opts = filtered().map(a => `<option value="${a.id}" ${a.id === readingState.id ? 'selected' : ''}>${esc(a.title)} · ${a.level}</option>`).join('');
     root.innerHTML = `
       <div class="filter-bar">
         <span style="font-family:var(--font-serif);font-size:.9rem;color:var(--ink-soft)">按类别查找：</span>
-        ${levelChips}
+        ${chips}
       </div>
       <div class="filter-bar">
         <label style="font-family:var(--font-serif);font-size:.9rem;color:var(--ink-soft)">选一篇文章：</label>
-        <select id="readingSelect">${opts}</select>
-        <span class="tag" id="readingCount">共 ${filtered().length} 篇</span>
+        <select id="readingSelect"></select>
+        <span class="tag" id="readingCount">共 0 篇</span>
       </div>
       <div id="readingContent"></div>
     `;
     $$('[data-rlevel]', root).forEach(b => b.addEventListener('click', () => {
       readingState.level = b.dataset.rlevel;
       $$('[data-rlevel]', root).forEach(x => x.classList.toggle('is-active', x === b));
-      renderSelect(); renderArticle();
+      renderSelect(); prepareReadingArticle(); renderArticle();
     }));
     const renderArticle = () => {
       const art = DATA.reading.find(a => a.id === readingState.id);
-      if (!art) { $('#readingContent').innerHTML = '<div class="empty"><span class="empty__mark">∅</span><p>该类别暂无文章，换个类别看看。</p></div>'; return; }
+      if (!art || !filtered().some(a => a.id === art.id)) {
+        $('#readingContent').innerHTML = '<div class="empty"><span class="empty__mark">∅</span><p>该分区暂无文章，换个类别看看。</p></div>';
+        return;
+      }
+      const submitted = readingState.submitted;
       const key = (qi) => `${art.id}-${qi}`;
       const qs = art.questions.map((q, qi) => {
-        const rec = S.practice.reading[key(qi)];
-        const chosen = readingState.answered[key(qi)] ?? rec?.chosen;
-        const showFeedback = chosen !== undefined;
+        const chosen = submitted ? submitted.answers[qi] : readingState.answered[qi];
+        const revealed = !!submitted && chosen !== undefined;
         const optHtml = q.opts.map((o, oi) => {
           let cls = '';
-          if (showFeedback) {
+          if (revealed) {
             if (oi === q.answer) cls = 'is-correct';
             else if (oi === chosen) cls = 'is-wrong';
           } else if (oi === chosen) cls = 'is-selected';
-          return `<button class="opt ${cls}" data-q="${qi}" data-o="${oi}"><span class="opt__key">${'ABCD'[oi]}</span><span>${esc(o.replace(/^[A-D]\.\s*/, ''))}</span></button>`;
+          return `<button class="opt ${cls}" data-q="${qi}" data-o="${oi}" ${submitted ? 'disabled' : ''}><span class="opt__key">${'ABCD'[oi]}</span><span>${esc(o.replace(/^[A-D]\.\s*/, ''))}</span></button>`;
         }).join('');
         return `<div class="question">
           <div class="question__q">${qi + 1}. ${esc(q.q)}</div>
           <div class="question__opts">${optHtml}</div>
-          ${showFeedback ? `<div class="feedback"><strong>${chosen === q.answer ? '答对了' : '再想想'}</strong> · ${esc(q.why)}</div>` : ''}
+          ${revealed ? `<div class="feedback"><strong>${chosen === q.answer ? '答对了' : '再想想'}</strong> · ${esc(q.why)}</div>` : ''}
         </div>`;
       }).join('');
+      const answeredCount = art.questions.filter((_, qi) => readingState.answered[qi] !== undefined).length;
+      const remaining = art.questions.length - answeredCount;
+      const actions = submitted
+        ? `<div class="read-actions"><span class="read-score">本次 ${submitted.score} / ${submitted.total} 题正确</span><button class="btn" id="readRedo">重做本篇</button></div>`
+        : `<div class="read-actions"><button class="btn btn--primary" id="readSubmit" ${remaining ? 'disabled' : ''}>${remaining ? `还有 ${remaining} 题未作答` : '提交答案'}</button></div>`;
+      const fav = S.favReading.includes(art.id);
       $('#readingContent').innerHTML = `
         <div class="card" style="margin-bottom:var(--sp-5)">
           <div class="passage">
-            <div class="passage__meta">${art.level} · ${art.meta}</div>
+            <div class="passage__head">
+              <div class="passage__meta">${art.level} · ${art.meta}</div>
+              <button class="read-fav ${fav ? 'is-fav' : ''}" data-rfav="${art.id}" title="${fav ? '取消收藏' : '收藏文章'}" aria-label="收藏文章">${fav ? '★' : '☆'}</button>
+            </div>
             <div class="passage__title">${esc(art.title)}</div>
-            ${art.body.map(p => `<p>${esc(p)}</p>`).join('')}
+            ${readingPassageHtml(art, submitted)}
           </div>
         </div>
-        <div class="sec-head"><span class="sec-head__no">§</span><h2>理解题</h2><span class="sec-head__note">${art.questions.length} 小题</span></div>
+        <div class="sec-head"><span class="sec-head__no">§</span><h2>理解题</h2><span class="sec-head__note">${submitted ? '已提交 · 原文已标注题号与关键词' : `${art.questions.length} 小题 · 全部作答后提交`}</span></div>
         <div class="card" id="readingQs">${qs}</div>
+        ${actions}
       `;
-      bindArticleEvents(art);
-    };
-    const bindArticleEvents = (art) => {
-      $$('#readingQs .opt').forEach(btn => btn.addEventListener('click', () => {
-        const qi = +btn.dataset.q, oi = +btn.dataset.o;
-        const q = art.questions[qi];
-        const key = `${art.id}-${qi}`;
-        const correct = oi === q.answer;
-        readingState.answered[key] = oi;
-        S.practice.reading[key] = { chosen: oi, correct, ts: Date.now() };
-        if (!correct) addMistake({ id: key, src: '阅读 · ' + art.title, q: q.q, opts: q.opts, answer: q.answer, chosen: oi, why: q.why, passage:(art.body||[]).join('\n\n') });
-        save(); renderArticle(); toast(correct ? '正确' : '已收入错题本');
+      $$('#readingQs .opt', root).forEach(btn => btn.addEventListener('click', () => {
+        if (readingState.submitted) return;
+        readingState.answered[+btn.dataset.q] = +btn.dataset.o;
+        renderArticle();
       }));
+      $('#readSubmit')?.addEventListener('click', () => {
+        const answers = {};
+        let score = 0;
+        const ts = Date.now();
+        art.questions.forEach((q, qi) => {
+          const oi = readingState.answered[qi];
+          if (oi === undefined) return;
+          answers[qi] = oi;
+          const correct = oi === q.answer;
+          if (correct) score++;
+          S.practice.reading[key(qi)] = { chosen: oi, correct, ts };
+          if (!correct) addMistake({ id: key(qi), src: '阅读 · ' + art.title, q: q.q, opts: q.opts, answer: q.answer, chosen: oi, why: q.why, passage: (art.body || []).join('\n\n') });
+        });
+        S.readingDone = S.readingDone || {};
+        S.readingDone[art.id] = { answers, score, total: art.questions.length, ts };
+        readingState.submitted = S.readingDone[art.id];
+        save(); renderArticle(); toast(`已提交 · 答对 ${score} / ${art.questions.length} 题`);
+      });
+      $('#readRedo')?.addEventListener('click', () => {
+        readingState.submitted = null;
+        readingState.answered = {};
+        renderArticle();
+        toast('已恢复原文，可重新作答');
+      });
+      $('[data-rfav]', root)?.addEventListener('click', () => {
+        const id = $('[data-rfav]', root).dataset.rfav;
+        if (S.favReading.includes(id)) { S.favReading = S.favReading.filter(x => x !== id); toast('已取消收藏'); }
+        else { S.favReading.push(id); toast('已收藏文章'); }
+        save(); RENDERERS.reading();
+      });
     };
-    $('#readingSelect').addEventListener('change', e => { readingState.id = e.target.value; readingState.answered = {}; renderArticle(); });
+    renderSelect();
     renderArticle();
   };
 
@@ -658,7 +794,7 @@
       <span>答题 <b>${totalAnswered()}</b> 次</span>
       <span>生词 <b>${S.vocabSaved.length}</b> 个</span>
       <span>已记背 <b>${Object.keys(S.vocabMarked || {}).length}</b> 个</span>
-      <span>收藏 <b>${S.favExpr.length}</b> 条</span>
+      <span>收藏 <b>${S.favExpr.length + (S.favReading || []).length + (S.favListening || []).length}</b> 条</span>
       <span>错题 <b>${S.mistakes.length}</b> 道</span>
       <span>模考 <b>${S.mockRuns.length}</b> 次</span>`;
     $('#dataModal').hidden = false;
@@ -682,6 +818,9 @@
         if (!parsed || typeof parsed !== 'object') throw new Error('bad');
         S = { ...clone(DEFAULT_STATE), ...parsed,
           practice: { ...DEFAULT_STATE.practice, ...(parsed.practice || {}) } };
+        if (!Array.isArray(S.favReading)) S.favReading = [];
+        if (!Array.isArray(S.favListening)) S.favListening = [];
+        if (!S.readingDone || typeof S.readingDone !== 'object' || Array.isArray(S.readingDone)) S.readingDone = {};
         save(); applyTheme(); closeDataModal();
         navigate('dashboard'); updateChrome();
         toast('数据导入成功');
