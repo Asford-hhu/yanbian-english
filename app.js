@@ -550,7 +550,7 @@
         const correct = oi === q.answer;
         readingState.answered[key] = oi;
         S.practice.reading[key] = { chosen: oi, correct, ts: Date.now() };
-        if (!correct) addMistake({ id: key, src: '阅读 · ' + art.title, q: q.q, opts: q.opts, answer: q.answer, chosen: oi, why: q.why });
+        if (!correct) addMistake({ id: key, src: '阅读 · ' + art.title, q: q.q, opts: q.opts, answer: q.answer, chosen: oi, why: q.why, passage:(art.body||[]).join('\n\n') });
         save(); renderArticle(); toast(correct ? '正确' : '已收入错题本');
       }));
     };

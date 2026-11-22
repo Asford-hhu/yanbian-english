@@ -410,14 +410,21 @@
     root.innerHTML = `
       <div style="font-family:var(--font-serif);color:var(--ink-soft);margin-bottom:var(--sp-4)">共 <b>${S.mistakes.length}</b> 道错题。点开看解析，考点都是提分线索。重练答对后可移除。</div>
       ${S.mistakes.map((m, i) => {
-        // 模考错题带 passage 字段：原文单独成块展示；旧数据的 why 里可能已含【原题材料】，此处剥离避免重复
+        // 阅读练习旧错题没有 passage：按来源标题反查文章正文补齐；模考错题自带 passage
+        let passageText = m.passage || '';
+        if (!passageText && (m.src || '').indexOf('阅读 · ') === 0) {
+          const title = m.src.replace(/^阅读\s*·\s*/, '');
+          const art = ((window.__YANBIAN__ && window.__YANBIAN__.DATA)?.reading || []).find(a => a.title === title || a.title === m.src);
+          if (art && art.body) passageText = art.body.join('\n\n');
+        }
+        // 旧数据的 why 里可能已含【原题材料】，剥离避免与原文区重复
         let why = m.why || '';
-        if (m.passage && why.indexOf('【原题材料】') === 0) {
+        if (passageText && why.indexOf('【原题材料】') === 0) {
           const cut = why.indexOf('【解析】');
           if (cut >= 0) why = why.slice(cut);
         }
-        const passage = m.passage
-          ? `<details class="mock-passage mistake-passage" open><summary>阅读原文 · 对照理解错因</summary><div>${esc(m.passage)}</div></details>`
+        const passage = passageText
+          ? `<details class="mock-passage mistake-passage" open><summary>阅读原文 · 对照理解错因</summary><div>${esc(passageText)}</div></details>`
           : '';
         return `<div class="card mistake-item" style="margin-bottom:var(--sp-3)">
           <div>
