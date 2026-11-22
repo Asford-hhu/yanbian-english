@@ -132,7 +132,6 @@
     document.addEventListener('keydown', e => {
       if (!confirmEl || confirmEl.hidden) return;
       if (e.key === 'Escape') { e.preventDefault(); finishConfirm(false); }
-      else if (e.key === 'Enter') { e.preventDefault(); finishConfirm(true); }
     });
     return confirmEl;
   }
