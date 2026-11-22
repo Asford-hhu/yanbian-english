@@ -399,6 +399,28 @@
   };
 
   /* ---------- 错题本 ---------- */
+  // 将锚点扩展为完整句子并用 <mark> 高亮；找不到锚点则原样返回，绝不臆造定位
+  function markKeySentence(text, anchor) {
+    if (!anchor || !text) return esc(text);
+    const i = text.indexOf(anchor);
+    if (i < 0) return esc(text);
+    // 向左扩展到句首（句末标点后或段落开头）
+    let s = i;
+    while (s > 0) {
+      const prev = text[s - 1];
+      if (/[.!?]\s$/.test(text.slice(Math.max(0, s - 2), s)) || prev === '\n') break;
+      s--;
+    }
+    // 向右扩展到句末标点
+    let e = i + anchor.length;
+    while (e < text.length && !/[.!?]/.test(text[e - 1])) e++;
+    if (e < text.length && /["”]/.test(text[e])) e++;
+    const before = esc(text.slice(0, s));
+    const key = esc(text.slice(s, e));
+    const after = esc(text.slice(e));
+    return before + '<mark class="key-sent">' + key + '</mark>' + after;
+  }
+
   R.mistakes = function () {
     const root = $('#view-mistakes');
     const S = getS();
@@ -423,16 +445,22 @@
           const cut = why.indexOf('【解析】');
           if (cut >= 0) why = why.slice(cut);
         }
-        const passage = passageText
-          ? `<details class="mock-passage mistake-passage" open><summary>阅读原文 · 对照理解错因</summary><div>${esc(passageText)}</div></details>`
+        // 关键句与逻辑解析（按题目 id 精确匹配，不改题干/答案/判分）
+        const kp = (window.YANBIAN_KEYPOINTS || {})[m.id];
+        const logicHtml = kp && kp.logic
+          ? `<div class="mistake-logic"><div class="mistake-logic__t">关键句逻辑解析</div><div class="mistake-logic__b">${esc(kp.logic)}</div></div>`
+          : '';
+        const passageHtml = passageText
+          ? `<details class="mock-passage mistake-passage" open><summary>阅读原文 · 高亮处为关键句</summary><div>${markKeySentence(passageText, kp && kp.anchor)}</div></details>`
           : '';
         return `<div class="card mistake-item" style="margin-bottom:var(--sp-3)">
           <div>
             <div class="mistake-item__src">${esc(m.src)}</div>
             <div class="mistake-item__q">${i + 1}. ${esc(m.q)}</div>
             <div class="mistake-item__ans">你选：<i>${esc(m.opts?.[m.chosen] ?? '—')}</i> · 正确：<b>${esc(m.opts?.[m.answer] ?? '—')}</b></div>
-            ${passage}
-            <div style="font-family:var(--font-serif);font-size:.84rem;color:var(--ink-soft);margin-top:var(--sp-2)">${esc(why)}</div>
+            ${passageHtml}
+            ${logicHtml}
+            <div class="mistake-why">${esc(why)}</div>
           </div>
           <button class="btn btn--sm remove-mistake" data-id="${esc(m.id)}">移除</button>
         </div>`;

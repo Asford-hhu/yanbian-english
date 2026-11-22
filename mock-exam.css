@@ -67,6 +67,37 @@
 .res-q__opts .is-chosen { color: #e11d48; }
 .res-q__why { margin-top: 8px; padding: 10px; border-radius: var(--radius); background: var(--accent-wash); font-size: .84rem; line-height: 1.8; color: var(--text-secondary); white-space: pre-wrap; }
 
+/* ===== 错题本：关键句高亮与逻辑解析 ===== */
+.mistake-passage .key-sent {
+  background: linear-gradient(transparent 58%, var(--accent-wash) 0);
+  color: var(--accent-ink);
+  font-weight: 600;
+  padding: 0 2px;
+  border-radius: 3px;
+  box-shadow: inset 0 -2px 0 var(--border-glow);
+}
+.mistake-logic {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border-glow);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-wash);
+}
+.mistake-logic__t {
+  font-family: var(--font-display);
+  font-size: .78rem; font-weight: 700; letter-spacing: .08em;
+  color: var(--accent-ink); margin-bottom: 6px;
+}
+.mistake-logic__b {
+  font-family: var(--font-body); font-size: .88rem; line-height: 1.85;
+  color: var(--text-main);
+}
+.mistake-why {
+  font-family: var(--font-serif); font-size: .84rem; color: var(--ink-soft);
+  margin-top: var(--sp-2); line-height: 1.75;
+}
+
 /* 二次确认弹窗：沿用站点玻璃卡片 / 赭石强调色，始终只有「取消 + 确定」两枚按钮 */
 .mock-confirm { z-index: 120; padding: var(--sp-3); }
 .mock-confirm__card {
