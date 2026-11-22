@@ -124,12 +124,9 @@
     confirmEl.hidden = true;
     confirmEl.setAttribute('role', 'dialog');
     confirmEl.setAttribute('aria-modal', 'true');
-    confirmEl.setAttribute('aria-labelledby', 'mockConfirmTitle');
+    confirmEl.setAttribute('aria-label', '确认操作');
     confirmEl.innerHTML = `<div class="modal__card mock-confirm__card">
-      <div class="mock-confirm__mark" aria-hidden="true">◇</div>
-      <div class="card__label mock-confirm__label">CONFIRM · 二次确认</div>
-      <h2 class="mock-confirm__title" id="mockConfirmTitle">请确认操作</h2>
-      <p class="modal__note mock-confirm__msg" id="mockConfirmMsg"></p>
+      <p class="mock-confirm__msg" id="mockConfirmMsg"></p>
       <div class="mock-confirm__actions">
         <button type="button" class="btn" data-mconfirm="cancel">取消</button>
         <button type="button" class="btn btn--primary" data-mconfirm="ok">确定</button>
@@ -147,13 +144,12 @@
     });
     return confirmEl;
   }
-  function confirmAction(msg, title) {
+  function confirmAction(msg) {
     // 已有弹窗未关闭时不再弹第二个，直接视为取消，杜绝误触叠加
     if (confirmResolve) return Promise.resolve(false);
     const el = ensureConfirm();
-    const msgEl = $('#mockConfirmMsg', el), titleEl = $('#mockConfirmTitle', el);
+    const msgEl = $('#mockConfirmMsg', el);
     if (msgEl) msgEl.textContent = msg;
-    if (titleEl) titleEl.textContent = title || '请确认操作';
     el.hidden = false;
     return new Promise(resolve => {
       confirmResolve = resolve;
@@ -389,7 +385,7 @@
     // 切换试卷 / 重开同一试卷：先彻底退出当前试卷（含停止听力），防止旧进度或二次播放
     if (isRunning()) {
       const fromId = run.examId;
-      if (fromId !== id && !(await confirmAction('你正在模考中，切换试卷会退出当前试卷并重置答题进度。确定切换吗？','切换试卷'))) return;
+      if (fromId !== id && !(await confirmAction('你正在模考中，切换试卷会退出当前试卷并重置答题进度。确定切换吗？'))) return;
       if (!isRunning()) return;
       hardReset();
     }
@@ -425,7 +421,7 @@
     btn.addEventListener('click', async ()=>{
       if(!run || run.examId!==examId || run.played) return;
       // 二次确认（站点统一弹窗）
-      if(!(await confirmAction('听力音频仅可播放一次，播放后不可暂停、不可拖动进度、固定正常语速。确认现在开始播放吗？','播放听力'))) return;
+      if(!(await confirmAction('听力音频仅可播放一次，播放后不可暂停、不可拖动进度、固定正常语速。确认现在开始播放吗？'))) return;
       if(!run || run.examId!==examId || run.played) return;
       const start=audio.currentTime;
       audio.playbackRate=1;
@@ -489,7 +485,7 @@
   // ---------------- 退出确认（切换功能=退出+重置） ----------------
   async function confirmExitThen(cb) {
     if(!isRunning()){ cb(); return; }
-    const ok = await confirmAction('你正在模考中，切换功能将退出本次模考并重置该试卷的答题进度（听力会立即停止且不可再次播放）。确定退出吗？','退出模考');
+    const ok = await confirmAction('你正在模考中，切换功能将退出本次模考并重置该试卷的答题进度（听力会立即停止且不可再次播放）。确定退出吗？');
     if(!ok || !isRunning()) return;
     const id=run && run.examId; hardReset();
     cb();
@@ -513,7 +509,7 @@
     bindSheet(root);
     bindAudio(root);
     $('#mockSubmit')?.addEventListener('click',async ()=>{
-      if(!(await confirmAction('确定提交答卷吗？提交后将自动判分并计入已完成。','交卷'))) return;
+      if(!(await confirmAction('确定提交答卷吗？提交后将自动判分并计入已完成。'))) return;
       if(!isRunning()) return;
       submitExam(false);
     });

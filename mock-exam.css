@@ -56,31 +56,20 @@
 .mock-confirm { z-index: 120; }
 .mock-confirm__card {
   width: min(420px, 100%);
-  padding: var(--sp-6) var(--sp-5) var(--sp-5);
+  padding: var(--sp-5);
   position: relative;
   overflow: hidden;
-  text-align: center;
-  /* 玻璃质感边框/发光沿用主题，但卡片底用实色，避免底层文字透出来干扰阅读 */
-  background: var(--bg-card-solid);
+  /* 用不透明主题底色，彻底挡住底层题干；边框/发光仍沿用玻璃主题 */
+  background: var(--bg-base);
 }
 .mock-confirm__card::before {
   content: '';
   position: absolute; left: 0; right: 0; top: 0; height: 3px;
   background: var(--grad-active);
 }
-.mock-confirm__mark {
-  width: 52px; height: 52px; margin: 0 auto var(--sp-3);
-  border-radius: 50%; display: grid; place-items: center;
-  font-family: var(--font-display); font-size: 1.5rem; font-style: italic;
-  color: var(--accent-ink); background: var(--accent-wash);
-  border: 1px solid var(--border-glow);
-  box-shadow: 0 0 0 6px var(--accent-wash), var(--shadow-md);
-}
-.mock-confirm__label { margin-bottom: var(--sp-2); }
-.mock-confirm__title { margin: 0 0 var(--sp-2) !important; font-size: 1.5rem; color: var(--text-main); }
 .mock-confirm__msg {
   margin: 0 0 var(--sp-5) !important;
-  text-align: left; line-height: 1.85; font-size: .9rem;
+  text-align: left; line-height: 1.8; font-size: .92rem; color: var(--text-main);
 }
 .mock-confirm__actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 .mock-confirm__actions .btn { justify-content: center; text-align: center; padding: 11px 12px; }
@@ -95,7 +84,5 @@
   .mock-score__num { font-size: 1.7rem; }
   .mock-timer__time { font-size: 1.6rem; }
   .as-grid { grid-template-columns: repeat(6, 1fr); }
-  .mock-confirm__card { padding: var(--sp-5) var(--sp-4) var(--sp-4); }
-  .mock-confirm__mark { width: 44px; height: 44px; font-size: 1.25rem; box-shadow: 0 0 0 5px var(--accent-wash); }
-  .mock-confirm__title { font-size: 1.3rem; }
+  .mock-confirm__card { padding: var(--sp-4); }
 }
