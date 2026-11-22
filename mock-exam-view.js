@@ -91,9 +91,20 @@
   }
 
   // 彻底退出：停计时、停音频、清空答题进度与持久化 active
+  // 只清持久化的 active，不整份回写 ST：避免卸载时用旧内存态覆盖其它标签页/外部清理过的收藏与已完成
+  function clearPersistedActive() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (!d || typeof d !== 'object') return;
+      d.active = null;
+      localStorage.setItem(LS_KEY, JSON.stringify(d));
+    } catch (e) {}
+  }
   function hardReset() {
     finishConfirm(false); // 关闭任何待确认弹窗，防止 bfcache 恢复后残留
-    stopTimer(); stopAudio(); run = null; ST.active = null; writeState(ST);
+    stopTimer(); stopAudio(); run = null; ST.active = null; clearPersistedActive();
   }
   function resetRun() { hardReset(); }
   function isRunning() { return !!(run && !run.submitted && run.startedAt); }
