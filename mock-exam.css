@@ -48,6 +48,8 @@
 .mock-passage { margin-bottom: var(--sp-4); border: 1px solid var(--border-glow); border-radius: var(--radius); background: var(--accent-wash); }
 .mock-passage summary { cursor: pointer; padding: 10px var(--sp-3); font-size: .82rem; color: var(--accent-ink); font-weight: 600; }
 .mock-passage > div { padding: 0 var(--sp-3) var(--sp-3); font-family: var(--font-body); font-size: .9rem; line-height: 1.85; color: var(--text-main); white-space: pre-wrap; }
+/* 错题本里的原文区：与答案行留出间距，分段沿用 mock-passage 的 pre-wrap */
+.mistake-passage { margin-top: var(--sp-3); }
 
 /* 结果页 */
 .mock-score__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); margin-top: var(--sp-4); text-align: center; }

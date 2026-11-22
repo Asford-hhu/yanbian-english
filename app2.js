@@ -409,15 +409,27 @@
     }
     root.innerHTML = `
       <div style="font-family:var(--font-serif);color:var(--ink-soft);margin-bottom:var(--sp-4)">共 <b>${S.mistakes.length}</b> 道错题。点开看解析，考点都是提分线索。重练答对后可移除。</div>
-      ${S.mistakes.map((m, i) => `<div class="card mistake-item" style="margin-bottom:var(--sp-3)">
-        <div>
-          <div class="mistake-item__src">${esc(m.src)}</div>
-          <div class="mistake-item__q">${i + 1}. ${esc(m.q)}</div>
-          <div class="mistake-item__ans">你选：<i>${esc(m.opts?.[m.chosen] ?? '—')}</i> · 正确：<b>${esc(m.opts?.[m.answer] ?? '—')}</b></div>
-          <div style="font-family:var(--font-serif);font-size:.84rem;color:var(--ink-soft);margin-top:var(--sp-2)">${esc(m.why || '')}</div>
-        </div>
-        <button class="btn btn--sm remove-mistake" data-id="${esc(m.id)}">移除</button>
-      </div>`).join('')}
+      ${S.mistakes.map((m, i) => {
+        // 模考错题带 passage 字段：原文单独成块展示；旧数据的 why 里可能已含【原题材料】，此处剥离避免重复
+        let why = m.why || '';
+        if (m.passage && why.indexOf('【原题材料】') === 0) {
+          const cut = why.indexOf('【解析】');
+          if (cut >= 0) why = why.slice(cut);
+        }
+        const passage = m.passage
+          ? `<details class="mock-passage mistake-passage" open><summary>阅读原文 · 对照理解错因</summary><div>${esc(m.passage)}</div></details>`
+          : '';
+        return `<div class="card mistake-item" style="margin-bottom:var(--sp-3)">
+          <div>
+            <div class="mistake-item__src">${esc(m.src)}</div>
+            <div class="mistake-item__q">${i + 1}. ${esc(m.q)}</div>
+            <div class="mistake-item__ans">你选：<i>${esc(m.opts?.[m.chosen] ?? '—')}</i> · 正确：<b>${esc(m.opts?.[m.answer] ?? '—')}</b></div>
+            ${passage}
+            <div style="font-family:var(--font-serif);font-size:.84rem;color:var(--ink-soft);margin-top:var(--sp-2)">${esc(why)}</div>
+          </div>
+          <button class="btn btn--sm remove-mistake" data-id="${esc(m.id)}">移除</button>
+        </div>`;
+      }).join('')}
       <div style="text-align:center;margin-top:var(--sp-4)"><button class="btn" id="clearMistakes">清空错题本</button></div>
     `;
     $$('.remove-mistake', root).forEach(b => b.addEventListener('click', () => {
