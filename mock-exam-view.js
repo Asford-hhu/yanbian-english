@@ -97,6 +97,62 @@
   function resetRun() { hardReset(); }
   function isRunning() { return !!(run && !run.submitted && run.startedAt); }
 
+  // ---------------- 站点风格二次确认弹窗（永远只有一个：确定 + 取消） ----------------
+  let confirmEl = null, confirmResolve = null;
+  function finishConfirm(ok) {
+    if (!confirmEl || confirmEl.hidden || !confirmResolve) return; // 重复点击只结算一次
+    confirmEl.hidden = true;
+    const resolve = confirmResolve; confirmResolve = null;
+    resolve(!!ok);
+  }
+  function ensureConfirm() {
+    if (confirmEl) return confirmEl;
+    confirmEl = document.createElement('div');
+    confirmEl.className = 'modal mock-confirm';
+    confirmEl.hidden = true;
+    confirmEl.setAttribute('role', 'dialog');
+    confirmEl.setAttribute('aria-modal', 'true');
+    confirmEl.setAttribute('aria-labelledby', 'mockConfirmTitle');
+    confirmEl.innerHTML = `<div class="modal__card mock-confirm__card">
+      <div class="mock-confirm__mark" aria-hidden="true">◇</div>
+      <div class="card__label mock-confirm__label">CONFIRM · 二次确认</div>
+      <h2 class="mock-confirm__title" id="mockConfirmTitle">请确认操作</h2>
+      <p class="modal__note mock-confirm__msg" id="mockConfirmMsg"></p>
+      <div class="mock-confirm__actions">
+        <button type="button" class="btn" data-mconfirm="cancel">取消</button>
+        <button type="button" class="btn btn--primary" data-mconfirm="ok">确定</button>
+      </div>
+    </div>`;
+    document.body.appendChild(confirmEl);
+    confirmEl.addEventListener('click', e => {
+      if (e.target === confirmEl) { finishConfirm(false); return; }
+      const b = e.target && e.target.closest && e.target.closest('[data-mconfirm]');
+      if (b) finishConfirm(b.dataset.mconfirm === 'ok');
+    });
+    document.addEventListener('keydown', e => {
+      if (!confirmEl || confirmEl.hidden) return;
+      if (e.key === 'Escape') { e.preventDefault(); finishConfirm(false); }
+      else if (e.key === 'Enter') { e.preventDefault(); finishConfirm(true); }
+    });
+    return confirmEl;
+  }
+  function confirmAction(msg, title) {
+    // 已有弹窗未关闭时不再弹第二个，直接视为取消，杜绝误触叠加
+    if (confirmResolve) return Promise.resolve(false);
+    const el = ensureConfirm();
+    const msgEl = $('#mockConfirmMsg', el), titleEl = $('#mockConfirmTitle', el);
+    if (msgEl) msgEl.textContent = msg;
+    if (titleEl) titleEl.textContent = title || '请确认操作';
+    el.hidden = false;
+    return new Promise(resolve => {
+      confirmResolve = resolve;
+      requestAnimationFrame(() => {
+        const cancel = el.querySelector('[data-mconfirm="cancel"]');
+        if (cancel) cancel.focus({ preventScroll: true });
+      });
+    });
+  }
+
   // ---------------- 试卷列表页 ----------------
   function listHtml() {
     const tabs = [
@@ -317,11 +373,13 @@
     }));
   }
 
-  function startExam(id) {
+  async function startExam(id) {
     const exam=examById(id); if(!exam) return;
     // 切换试卷 / 重开同一试卷：先彻底退出当前试卷（含停止听力），防止旧进度或二次播放
     if (isRunning()) {
-      if (run.examId !== id && !window.confirm('你正在模考中，切换试卷会退出当前试卷并重置答题进度。确定切换吗？')) return;
+      const fromId = run.examId;
+      if (fromId !== id && !(await confirmAction('你正在模考中，切换试卷会退出当前试卷并重置答题进度。确定切换吗？','切换试卷'))) return;
+      if (!isRunning()) return;
       hardReset();
     }
     const secs=sectionsOf(exam);
@@ -353,10 +411,11 @@
     if(audio.getAttribute('src')!==exam.audio){ audio.src=exam.audio; audio.load(); }
     audio.playbackRate=1;
     syncAudioUI();
-    btn.addEventListener('click',()=>{
+    btn.addEventListener('click', async ()=>{
       if(!run || run.examId!==examId || run.played) return;
-      // 二次确认
-      if(!window.confirm('听力音频仅可播放一次，播放后不可暂停、不可拖动进度、固定正常语速。确认现在开始播放吗？')) return;
+      // 二次确认（站点统一弹窗）
+      if(!(await confirmAction('听力音频仅可播放一次，播放后不可暂停、不可拖动进度、固定正常语速。确认现在开始播放吗？','播放听力'))) return;
+      if(!run || run.examId!==examId || run.played) return;
       const start=audio.currentTime;
       audio.playbackRate=1;
       const p=audio.play();
@@ -417,13 +476,13 @@
   }
 
   // ---------------- 退出确认（切换功能=退出+重置） ----------------
-  function confirmExitThen(cb) {
+  async function confirmExitThen(cb) {
     if(!isRunning()){ cb(); return; }
-    if(window.confirm('你正在模考中，切换功能将退出本次模考并重置该试卷的答题进度（听力会立即停止且不可再次播放）。确定退出吗？')){
-      const id=run && run.examId; hardReset();
-      cb();
-      if(id) toast('已退出模考，进度已重置');
-    }
+    const ok = await confirmAction('你正在模考中，切换功能将退出本次模考并重置该试卷的答题进度（听力会立即停止且不可再次播放）。确定退出吗？','退出模考');
+    if(!ok || !isRunning()) return;
+    const id=run && run.examId; hardReset();
+    cb();
+    if(id) toast('已退出模考，进度已重置');
   }
 
   function bindExam(root) {
@@ -442,8 +501,10 @@
     }));
     bindSheet(root);
     bindAudio(root);
-    $('#mockSubmit')?.addEventListener('click',()=>{
-      if(window.confirm('确定提交答卷吗？提交后将自动判分并计入已完成。')) submitExam(false);
+    $('#mockSubmit')?.addEventListener('click',async ()=>{
+      if(!(await confirmAction('确定提交答卷吗？提交后将自动判分并计入已完成。','交卷'))) return;
+      if(!isRunning()) return;
+      submitExam(false);
     });
     $('#mockExit')?.addEventListener('click',()=>confirmExitThen(paintList));
   }
@@ -488,7 +549,7 @@
   }, true);
 
   // 离开网站 / 刷新 / bfcache 恢复：彻底重置，绝不残留可继续答题的试卷或听力
-  window.addEventListener('beforeunload', hardReset);
+  // 注意：不注册 beforeunload，避免浏览器弹出原生"离开此网站"提示（会出现非本站风格的按钮）
   window.addEventListener('pagehide', hardReset);
   window.addEventListener('pageshow', function(e){
     if(!e.persisted) return;
