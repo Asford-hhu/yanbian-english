@@ -180,7 +180,7 @@
       const done = ST.done.find(x => x.id === e.id);
       const hasAudio = !!e.audio;
       return `<article class="card exam-card" style="border-left:3px solid var(--accent)">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div class="exam-card__head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
           <div>
             <div class="card__label">${e.level==='CET4'?'CET-4':'CET-6'} · ${e.year}年${e.month}月 · 第${e.set}套</div>
             <h3 style="margin:6px 0;font-family:var(--font-display)">${esc(e.title)}</h3>
@@ -190,7 +190,7 @@
             </div>
             ${done?`<div style="margin-top:6px;font-size:.82rem;color:var(--accent-ink)">✓ 已完成 · 得分 ${done.score}/${done.total} · 正确率 ${done.rate}%</div>`:''}
           </div>
-          <button class="n2-card__fav ${fav?'is-fav':''}" data-mfav="${e.id}" title="收藏" aria-label="收藏">${fav?'★':'☆'}</button>
+          <button class="mock-fav ${fav?'is-fav':''}" data-mfav="${e.id}" title="收藏" aria-label="收藏">${fav?'★':'☆'}</button>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
           ${done?`<button class="btn btn--sm" data-mreview="${e.id}">查看解析</button><button class="btn btn--sm" data-mdel="${e.id}">移出已完成</button>`:''}
