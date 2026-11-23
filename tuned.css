@@ -471,3 +471,22 @@ body { color: var(--text-main); }
   border: 1px solid var(--danger); transition: background .2s;
 }
 .read-done-remove:hover { background: var(--accent-wash); }
+
+/* ---------- 音乐歌词独立弹窗（沿用站点 .modal 风格） ---------- */
+.music-lyric__card { width: min(560px, 100%); max-height: min(78vh, 720px); display: flex; flex-direction: column; }
+.music-lyric__head { flex: 0 0 auto; padding-right: var(--sp-5); }
+.music-lyric__head h2 { margin: 0 0 4px; }
+.music-lyric__body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding-right: 4px; border-top: 1px solid var(--rule); }
+.music-lyric__line { padding: 9px 2px; border-bottom: 1px solid var(--rule); }
+.music-lyric__line:last-child { border-bottom: 0; }
+.music-lyric__en { font-family: var(--font-serif); font-size: .95rem; color: var(--ink); line-height: 1.5; }
+.music-lyric__zh { font-family: var(--font-serif); font-size: .82rem; color: var(--ink-soft); line-height: 1.5; margin-top: 3px; }
+.music-card__lyric {
+  position: absolute; right: 8px; top: 8px; z-index: 2;
+  border: 0; border-radius: var(--chip-radius); cursor: pointer;
+  background: rgba(255,255,255,.9); color: #4b3a86;
+  font-family: var(--font-body); font-size: .72rem; padding: 3px 9px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15); transition: transform .2s var(--ease);
+}
+.music-card__lyric:hover { transform: scale(1.06); }
+:root[data-theme="dark"] .music-card__lyric { background: rgba(30,22,62,.82); color: #d7c8ff; }
