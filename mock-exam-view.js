@@ -185,7 +185,7 @@
             <div class="card__label">${e.level==='CET4'?'CET-4':'CET-6'} · ${e.year}年${e.month}月 · 第${e.set}套</div>
             <h3 style="margin:6px 0;font-family:var(--font-display)">${esc(e.title)}</h3>
             <div style="font-size:.82rem;color:var(--text-secondary)">
-              共 ${e.questions.length} 题 · ${e.questions.filter(q=>q.type==='listening').length} 听力 + ${e.questions.filter(q=>q.type==='reading').length} 阅读 · ${e.minutes} 分钟
+              共 ${e.questions.length} 题 · ${e.questions.filter(q=>q.type==='listening').length} 听力 + ${e.questions.filter(q=>q.type==='matching').length} 长篇阅读 + ${e.questions.filter(q=>q.type==='reading').length} 仔细阅读 · ${e.minutes} 分钟
               ${hasAudio?' · <span style="color:var(--accent)">含听力原声</span>':' · 无听力'}
             </div>
             ${done?`<div style="margin-top:6px;font-size:.82rem;color:var(--accent-ink)">✓ 已完成 · 得分 ${done.score}/${done.total} · 正确率 ${done.rate}%</div>`:''}
@@ -204,6 +204,8 @@
         <div class="card__label">Real Exam · 真题模考</div>
         <p style="font-family:var(--font-body);margin:0;color:var(--text-secondary);line-height:1.85">
           2026年6月 <b>四级 / 六级</b> 官方真题，含听力原声、长篇阅读匹配与仔细阅读，<b>已剔除作文与翻译</b>。
+          时长按<b>教育部教育考试院官方规定</b>设置：听力四级 25 分钟／六级 30 分钟，阅读理解 40 分钟（已剔除的写作、翻译不计）；
+          含听力卷为两者之和（四级 65／六级 70 分钟），无听力卷为 40 分钟。
           选卷开考后，听力<b>仅可播放一次</b>（播放前二次确认，播放中不可暂停或拖动）；各部分可自由切换、随时改答案；
           交卷或倒计时结束自动判分，答错自动进错题本并附原题解析。中途切换到其它功能将<b>重置本卷进度</b>。
         </p>
