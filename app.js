@@ -32,6 +32,7 @@
     practice: { reading: {}, listening: {}, mock: {} }, // 各题答题记录 {qid: {chosen, correct, ts}}
     vocabSaved: [],            // 生词本 [word]
     vocabMarked: {},           // 已记背 { word: 次数 }，每次点标记 +1
+    vocabDaily: {},            // 每日记背次数 { 'YYYY-MM-DD': 次数 }，用于近七天折线图
     favExpr: [],               // 收藏表达 [en]
     favReading: [],            // 收藏阅读文章 [articleId]
     favListening: [],          // 收藏听说材料 [itemId]
@@ -52,6 +53,7 @@
       if (!Array.isArray(state.favReading)) state.favReading = [];
       if (!Array.isArray(state.favListening)) state.favListening = [];
       if (!state.readingDone || typeof state.readingDone !== 'object' || Array.isArray(state.readingDone)) state.readingDone = {};
+      if (!state.vocabDaily || typeof state.vocabDaily !== 'object' || Array.isArray(state.vocabDaily)) state.vocabDaily = {};
       return state;
     } catch (e) {
       return clone(DEFAULT_STATE);
@@ -452,6 +454,39 @@
   }
 
   /* ---------- 7. 研习路径 ---------- */
+  // 每日一句：按本地日期确定切换一句英语学习名言/警句（含中文释义），每天自动更换
+  const DAILY_NOTES = [
+    ['The beautiful thing about learning is that no one can take it away from you.', '学到的东西，谁也夺不走。'],
+    ['Education is the most powerful weapon which you can use to change the world.', '教育是你改变世界最有力的武器。'],
+    ['Learning never exhausts the mind.', '学习永不会让心智枯竭。'],
+    ['The expert in anything was once a beginner.', '任何领域的高手，都曾是初学者。'],
+    ['Study the past if you would define the future.', '欲定未来，先读历史。'],
+    ['Knowledge is power.', '知识就是力量。'],
+    ['Practice makes perfect.', '熟能生巧。'],
+    ['A journey of a thousand miles begins with a single step.', '千里之行，始于足下。'],
+    ['The only person who is educated is the one who has learned how to learn and change.', '真正受过教育的人，是学会了如何学习与改变的人。'],
+    ['Live as if you were to die tomorrow. Learn as if you were to live forever.', '像明天就要离世那样生活，像永远活着那样学习。'],
+    ['Anyone who stops learning is old, whether at twenty or eighty.', '停止学习的人就老了，无论二十岁还是八十岁。'],
+    ['It always seems impossible until it is done.', '做成之前，一切看似不可能。'],
+    ['Success is the sum of small efforts, repeated day in and day out.', '成功是日复一日微小努力的累积。'],
+    ['I am still learning.', '我仍在学习。'],
+    ['The roots of education are bitter, but the fruit is sweet.', '教育的根是苦的，果实却是甜的。'],
+    ['Learning is a treasure that will follow its owner everywhere.', '学识是随身相伴的财富。'],
+    ['He who asks a question is a fool for five minutes; he who does not ask remains a fool forever.', '提问的人会傻五分钟，不提问的人会傻一辈子。'],
+    ['An investment in knowledge pays the best interest.', '投资知识，回报最高。'],
+    ['Genius is one percent inspiration and ninety-nine percent perspiration.', '天才是百分之一的灵感加百分之九十九的汗水。'],
+    ['We learn from failure, not from success.', '我们从失败中学习，而非从成功中。'],
+    ['The more I learn, the more I realize how much I do not know.', '我学得越多，越发现自己不懂的还有很多。'],
+    ['You do not have to be great to start, but you have to start to be great.', '不必很优秀才能开始，但必须开始才能变得优秀。'],
+    ['Discipline is the bridge between goals and accomplishment.', '自律是目标与成就之间的桥梁。'],
+    ['If you think education is expensive, try ignorance.', '若以为教育太贵，试试无知的代价。']
+  ];
+  function dailyNote() {
+    const now = new Date();
+    const dayIndex = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
+    return DAILY_NOTES[dayIndex % DAILY_NOTES.length];
+  }
+
   RENDERERS.study = function () {
     const root = $('#view-study');
     const rows = DATA.studyPath.map(p => `
@@ -461,11 +496,12 @@
         <td style="color:var(--ink-soft)">${p.desc}</td>
         <td><span class="tag tag--pine">${p.target}</span></td>
       </tr>`).join('');
+    const note = dailyNote();
     root.innerHTML = `
-      <div class="card" style="margin-bottom:var(--sp-5)">
-        <div class="card__label">A Note to Myself</div>
-        <p style="font-family:var(--font-display);font-size:1.15rem;line-height:1.9;margin:0;color:var(--ink);text-align:center">我不能改变风的方向，但我可以调整我的帆，以永远到达我的目的地。</p>
-        <p style="font-family:var(--font-serif);font-size:.9rem;line-height:1.7;margin:var(--sp-3) 0 0;color:var(--ink-faint);text-align:center;font-style:italic">I cannot change the direction of the wind, but I can adjust my sails to always reach my destination.</p>
+      <div class="card daily-note" style="margin-bottom:var(--sp-5)">
+        <div class="card__label">A Note for Today</div>
+        <p class="daily-note__en">“${esc(note[0])}”</p>
+        <p class="daily-note__zh">${esc(note[1])}</p>
       </div>
       <div class="sec-head"><span class="sec-head__no">§</span><h2>四步功课</h2><span class="sec-head__note">输入 → 输出 → 巩固</span></div>
       <div class="card" style="padding:0;overflow:hidden">
@@ -740,16 +776,17 @@
   /* ---------- 9. 写作表达库 ---------- */
   RENDERERS.writing = function () {
     const root = $('#view-writing');
-    const cats = ['全部', ...new Set(DATA.writing.map(x => x.cat))];
+    const cats = [...new Set(DATA.writing.map(x => x.cat))];
     let activeCat = '全部';
     let favOnly = false;
     const render = () => {
       const base = favOnly ? DATA.writing.filter(x => S.favExpr.includes(x.en)) : DATA.writing;
       const list = activeCat === '全部' ? base : base.filter(x => x.cat === activeCat);
-      const scopeChips = `
-        <button class="filter-chip ${!favOnly ? 'is-active' : ''}" data-wscope="all">全部表达</button>
-        <button class="filter-chip ${favOnly ? 'is-active' : ''}" data-wscope="fav">我的收藏 (${S.favExpr.length})</button>`;
-      const chips = cats.map(c => `<button class="filter-chip ${c === activeCat ? 'is-active' : ''}" data-cat="${c}">${c}</button>`).join('');
+      // 单一层级：全部 / 我的收藏 / 各分类，放在同一排筛选里
+      const chips = `
+        <button class="filter-chip ${(!favOnly && activeCat === '全部') ? 'is-active' : ''}" data-wscope="all">全部</button>
+        <button class="filter-chip ${favOnly ? 'is-active' : ''}" data-wscope="fav">我的收藏 (${S.favExpr.length})</button>`
+        + cats.map(c => `<button class="filter-chip ${(!favOnly && c === activeCat) ? 'is-active' : ''}" data-cat="${c}">${c}</button>`).join('');
       const cards = list.map(x => {
         const fav = S.favExpr.includes(x.en);
         return `<div class="card card--hover expr-card">
@@ -765,18 +802,21 @@
       }).join('');
       root.innerHTML = `
         <div style="font-family:var(--font-serif);color:var(--ink-soft);margin-bottom:var(--sp-4)">按功能分类的表达库。点 ☆ 收藏到你的表达夹，点朗读听发音。<b>已收藏 ${S.favExpr.length} 条</b>，可在「我的收藏」分区单独查看。</div>
-        <div class="filter-bar">${scopeChips}</div>
-        ${favOnly ? '' : `<div class="filter-bar">${chips}</div>`}
+        <div class="filter-bar">${chips}</div>
         ${list.length
           ? `<div class="grid grid--2">${cards}</div>`
           : `<div class="empty"><span class="empty__mark">∅</span><p>${favOnly ? '还没有收藏表达，点卡片右下角的 ☆ 收藏后会出现在这里。' : '该分类暂无表达，换个类别看看。'}</p></div>`}
       `;
       $$('[data-wscope]', root).forEach(b => b.addEventListener('click', () => {
         favOnly = b.dataset.wscope === 'fav';
-        if (favOnly) activeCat = '全部';
+        activeCat = '全部';
         render();
       }));
-      $$('[data-cat]', root).forEach(b => b.addEventListener('click', () => { activeCat = b.dataset.cat; render(); }));
+      $$('[data-cat]', root).forEach(b => b.addEventListener('click', () => {
+        favOnly = false;
+        activeCat = b.dataset.cat;
+        render();
+      }));
       $$('.fav-btn', root).forEach(b => b.addEventListener('click', () => {
         const en = b.dataset.fav;
         if (S.favExpr.includes(en)) { S.favExpr = S.favExpr.filter(x => x !== en); toast('已取消收藏'); }

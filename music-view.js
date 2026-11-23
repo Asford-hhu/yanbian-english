@@ -2,9 +2,9 @@
    砚边 · 英文音乐模块（独立渲染器）
    曲库来自 music-data.js（公有领域经典英文歌曲，本地自托管完整版 mp3）
    播放器使用页面原生 <audio controls>，由用户点击手势触发，微信内可正常出声。
-   新增「歌词」独立入口：点卡片或播放器上的「歌词」打开站点风格弹窗，
-   显示该文件对应的中英对照歌词（数据见 lyrics-data.js）。
-   卡片、分类筛选、搜索、播放器条的视觉设计保持不变。
+   播放器条就地嵌在被点歌曲卡片内，不再跳到列表底部。
+   歌词弹窗里的中英歌词会随播放进度高亮并自动滚动到当前句。
+   卡片、分类筛选、搜索的视觉设计保持不变。
    ============================================================ */
 (function registerMusicView() {
   'use strict';
@@ -42,6 +42,9 @@
   const audioSrc = (m) => m.file || ('audio/music/' + m.id + '.mp3');
 
   // 站点风格歌词弹窗（复用 .modal 样式，单例，不新增结构到 HTML）
+  let lyricSong = null;   // 当前打开歌词对应的歌曲
+  let lyricIdx = -1;      // 上次高亮的歌词行，避免重复滚动
+
   function ensureLyricModal() {
     let modal = document.getElementById('musicLyricModal');
     if (modal) return modal;
@@ -66,25 +69,52 @@
     });
     return modal;
   }
+
+  // 让歌词行跟随播放进度：按当前时间占比定位到对应行并滚到中间
+  function syncLyric() {
+    const modal = document.getElementById('musicLyricModal');
+    if (!modal || modal.hidden || !lyricSong) return;
+    const audio = document.getElementById('musicAudio');
+    if (!audio || !isFinite(audio.duration) || audio.duration <= 0) return;
+    if (!window.__MUSIC_CURRENT__ || String(lyricSong.id) !== String(window.__MUSIC_CURRENT__.id)) return;
+    const body = document.getElementById('musicLyricBody');
+    const lines = body ? [...body.querySelectorAll('.music-lyric__line')] : [];
+    if (!lines.length) return;
+    let idx = Math.floor(audio.currentTime / audio.duration * lines.length);
+    if (idx < 0) idx = 0;
+    if (idx >= lines.length) idx = lines.length - 1;
+    if (idx === lyricIdx) return;
+    lyricIdx = idx;
+    lines.forEach((l, i) => l.classList.toggle('is-playing', i === idx));
+    const line = lines[idx];
+    const target = line.offsetTop - body.clientHeight / 2 + line.clientHeight / 2;
+    body.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+  }
+
   function openLyric(m) {
     const modal = ensureLyricModal();
+    lyricSong = m;
+    lyricIdx = -1;
     const data = LYRICS[m.id];
     document.getElementById('musicLyricTitle').textContent = m.title;
     document.getElementById('musicLyricSub').textContent = `${m.artist} · ${m.cat} · ${data ? data.zh : ''}`;
     const body = document.getElementById('musicLyricBody');
     if (data && data.lines && data.lines.length) {
-      body.innerHTML = data.lines.map(([en, zh]) =>
-        `<div class="music-lyric__line"><div class="music-lyric__en">${esc(en)}</div><div class="music-lyric__zh">${esc(zh)}</div></div>`
+      body.innerHTML = data.lines.map(([en, zh], i) =>
+        `<div class="music-lyric__line" data-line="${i}"><div class="music-lyric__en">${esc(en)}</div><div class="music-lyric__zh">${esc(zh)}</div></div>`
       ).join('');
     } else {
       body.innerHTML = '<p class="modal__note">这首歌暂未收录歌词。</p>';
     }
     modal.hidden = false;
     body.scrollTop = 0;
+    syncLyric();
   }
   function closeLyric() {
     const modal = document.getElementById('musicLyricModal');
     if (modal) modal.hidden = true;
+    lyricSong = null;
+    lyricIdx = -1;
   }
 
   RENDERERS.music = function () {
@@ -104,11 +134,26 @@
       });
     };
 
+    // 就地播放器：嵌在被点歌曲卡片内，不再落到列表底部
+    const playerHtml = (m) => `
+      <div class="music-player-bar" id="musicPlayerBar">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;flex-wrap:wrap">
+          <strong style="font-family:var(--font-serif);font-size:.9rem">♫ 正在播放 · ${esc(m.title)} <span class="tag tag--pine" style="margin-left:6px;font-size:.66rem">完整版</span></strong>
+          <span style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn--sm" id="musicLyricBtn">歌词</button>
+            <button class="btn btn--sm" id="musicClose">收起</button>
+          </span>
+        </div>
+        <audio id="musicAudio" controls preload="none" style="width:100%;height:40px" src="${esc(audioSrc(m))}">
+          你的浏览器不支持音频播放。
+        </audio>
+      </div>`;
+
     const cardHtml = (m) => {
       const playing = current && String(current.id) === String(m.id);
-      return `<div class="music-card">
-        <div class="music-card__cover-wrap" style="position:relative;aspect-ratio:1;${coverStyle(m)};display:flex;align-items:center;justify-content:center;overflow:hidden">
-          <span style="font-size:2.4rem;color:rgba(255,255,255,.92);text-shadow:0 2px 12px rgba(0,0,0,.25)">♫</span>
+      return `<div class="music-card ${playing ? 'is-playing' : ''}">
+        <div class="music-card__cover-wrap" style="position:relative;${coverStyle(m)};display:flex;align-items:center;justify-content:center;overflow:hidden">
+          <span class="music-card__note">♫</span>
           <button class="music-card__lyric" data-lyric="${esc(m.id)}" title="查看歌词">歌词</button>
         </div>
         <div class="music-card__body">
@@ -119,30 +164,9 @@
             <button class="music-card__play" data-mid="${esc(m.id)}">${playing ? '♫ 播放中' : '▶ 播放'}</button>
           </div>
         </div>
+        ${playing ? playerHtml(m) : ''}
       </div>`;
     };
-
-    const playerHtml = (m) => `
-      <div class="music-player-bar" id="musicPlayerBar">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
-          <strong style="font-family:var(--font-serif);font-size:.95rem">♫ ${esc(m.title)} — ${esc(m.artist)} <span class="tag tag--pine" style="margin-left:6px;font-size:.68rem">公有领域 · 完整版</span></strong>
-          <span style="display:flex;gap:8px;align-items:center">
-            <button class="btn btn--sm" id="musicLyricBtn">歌词</button>
-            <button class="btn btn--sm" id="musicClose">收起</button>
-          </span>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:56px;height:56px;border-radius:8px;flex-shrink:0;display:grid;place-items:center;color:#fff;font-size:1.4rem;${coverStyle(m)}">♫</div>
-          <div style="flex:1;min-width:0">
-            <audio id="musicAudio" controls preload="none" style="width:100%;height:42px" src="${esc(audioSrc(m))}">
-              你的浏览器不支持音频播放。
-            </audio>
-            <div style="font-family:var(--font-serif);font-size:.74rem;color:var(--ink-faint);margin-top:4px">
-              公有领域经典曲目，本地完整版，点播放键 ▶ 即可收听，无需联网外链或切换线路。
-            </div>
-          </div>
-        </div>
-      </div>`;
 
     const render = (keepFocus) => {
       const items = list();
@@ -154,7 +178,7 @@
         <div class="card" style="border-left:3px solid var(--accent);margin-bottom:var(--sp-5)">
           <div class="card__label">English Music · 英文磨耳朵</div>
           <p style="font-family:var(--font-serif);margin:0;color:var(--ink-soft);line-height:1.8">
-            听歌是最不费力的语感训练。共 <b>${MUSIC.length}</b> 首公有领域经典英文歌，按风格分类，均为<b>完整版原曲、本地播放</b>，不连外链、无需切换线路。点「▶ 播放」在下方收听，点卡片上的「歌词」对照中英歌词跟唱、顺便记表达。
+            听歌是最不费力的语感训练。共 <b>${MUSIC.length}</b> 首公有领域经典英文歌，按风格分类，均为<b>完整版原曲、本地播放</b>，不连外链、无需切换线路。点「▶ 播放」就在这首歌的卡片里收听，点「歌词」对照中英歌词跟唱，歌词会随播放进度自动高亮。
           </p>
         </div>
         <div class="filter-bar">${chips}</div>
@@ -163,8 +187,8 @@
           <span class="vocab-count">找到 ${items.length} 首</span>
         </div>
         <div class="music-grid">${cards}</div>
-        ${current ? playerHtml(current) : ''}
       `;
+      window.__MUSIC_CURRENT__ = current;
       $$('[data-mcat]', root).forEach(b => b.addEventListener('click', () => { cat = b.dataset.mcat; query = ''; render(); }));
       const input = $('#music-q', root);
       if (input) {
@@ -176,7 +200,6 @@
         if (!next) return;
         current = next;
         render(true);
-        setTimeout(() => { const bar = $('#musicPlayerBar'); if (bar) bar.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 30);
       }));
       $$('[data-lyric]', root).forEach(b => b.addEventListener('click', () => {
         const next = MUSIC.find(m => String(m.id) === b.dataset.lyric);
@@ -189,6 +212,12 @@
         const audio = $('#musicAudio'); if (audio) { audio.pause(); audio.currentTime = 0; }
         current = null; render();
       });
+      const audio = $('#musicAudio');
+      if (audio) {
+        audio.addEventListener('timeupdate', syncLyric);
+        audio.addEventListener('play', syncLyric);
+        audio.addEventListener('loadedmetadata', syncLyric);
+      }
     };
     render();
   };

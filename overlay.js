@@ -20,9 +20,23 @@
     });
   };
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint);
-  else paint();
+  // 页眉大字右侧的模块插画组：与侧栏四项功课的卡片叠层插画一致，填补右侧空白
+  const HEAD_KEYS = ['reading', 'writing', 'vocab', 'listening'];
+  const paintHead = () => {
+    const host = document.querySelector('.page-head__title');
+    if (!host || host.querySelector('.head-ornts')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'head-ornts';
+    wrap.setAttribute('aria-hidden', 'true');
+    wrap.innerHTML = HEAD_KEYS.map(k => `<span class="head-ornt">${ART[k]}</span>`).join('');
+    host.appendChild(wrap);
+  };
+
+  const decorate = () => { paint(); paintHead(); };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', decorate);
+  else decorate();
 
   // 概览视图重渲染会重建卡片，补挂一次
-  new MutationObserver(paint).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(decorate).observe(document.body, { childList: true, subtree: true });
 })();

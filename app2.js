@@ -163,6 +163,10 @@
       if (mk) {
         const w = mk.dataset.mark;
         S.vocabMarked[w] = markedTimes(w) + 1;
+        // 同步按日累计，供进度模块「近七天单词记忆数」折线图使用
+        if (!S.vocabDaily || typeof S.vocabDaily !== 'object' || Array.isArray(S.vocabDaily)) S.vocabDaily = {};
+        const dk = new Date().toISOString().slice(0, 10);
+        S.vocabDaily[dk] = (S.vocabDaily[dk] || 0) + 1;
         save(); toast(`「${w}」已记背 ${S.vocabMarked[w]} 次`); render(true); return;
       }
       const sv = t.closest('[data-save]');
@@ -623,6 +627,8 @@
   R.stats = function () {
     const root = $('#view-stats');
     const S = getS();
+    if (!S.vocabDaily || typeof S.vocabDaily !== 'object' || Array.isArray(S.vocabDaily)) S.vocabDaily = {};
+
     // 近 7 天答题分布（用打卡与答题时间戳近似）
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -635,13 +641,24 @@
     const maxN = Math.max(1, ...days.map(d => d.n));
     const bars = days.map((d, i) => `<div class="bar ${i === 6 ? 'is-today' : ''}" style="height:${Math.max(3, d.n / maxN * 100)}%" title="${d.key} · ${d.n} 次"><span>${d.label}</span></div>`).join('');
 
-    // 热力图（近 30 天打卡）
-    let cells = '';
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      const on = S.checkins.includes(d.toISOString().slice(0, 10));
-      cells += `<div class="heat-cell" data-lvl="${on ? (i < 7 ? 3 : 2) : 0}" title="${d.toISOString().slice(0, 10)}"></div>`;
-    }
+    // 近 7 天单词记忆数（按每日点「已记背」次数统计）
+    const vdays = days.map(d => ({ ...d, n: S.vocabDaily[d.key] || 0 }));
+    const vMax = Math.max(1, ...vdays.map(d => d.n));
+    const vw = 560, vh = 170, padL = 30, padR = 14, padT = 18, padB = 30;
+    const px = i => padL + i * (vw - padL - padR) / 6;
+    const py = n => padT + (1 - n / vMax) * (vh - padT - padB);
+    const polyPts = vdays.map((d, i) => `${px(i)},${py(d.n)}`).join(' ');
+    const vDots = vdays.map((d, i) => `<circle cx="${px(i)}" cy="${py(d.n)}" r="${i === 6 ? 5 : 3.5}" class="vdot ${i === 6 ? 'is-today' : ''}"><title>${d.key} · ${d.n} 词次</title></circle>`).join('');
+    const vLabels = vdays.map((d, i) => `<text x="${px(i)}" y="${vh - 8}" class="vlabel">${d.label}</text>`).join('');
+    const vGrid = [0, .5, 1].map(f => `<line x1="${padL}" x2="${vw - padR}" y1="${py(vMax * f)}" y2="${py(vMax * f)}" class="vgrid"/>`).join('');
+    const lineChart = `
+      <svg class="vocab-line" viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="none" role="img" aria-label="近七天单词记忆数折线图">
+        ${vGrid}
+        <polyline points="${polyPts}" class="vline"/>
+        ${vDots}
+        ${vLabels}
+      </svg>
+      <div class="chart-legend"><span><i class="legend-dot" style="background:var(--accent)"></i>每日「已记背」点击次数</span><span>最高 ${vMax} 次</span></div>`;
 
     const rate = (() => {
       let t = 0, o = 0;
@@ -650,21 +667,67 @@
       return t ? Math.round(o / t * 100) : 0;
     })();
     const avgSec = S.mockRuns.length ? Math.round(S.mockRuns.reduce((a, r) => a + r.seconds, 0) / S.mockRuns.length) : 0;
+    const fmtHM = (s) => {
+      if (!s) return '—';
+      const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+      return (h ? h + 'h ' : '') + (m || (h ? 0 : 1)) + 'min';
+    };
 
     root.innerHTML = `
       <div class="stat-strip" style="margin-bottom:var(--sp-5)">
         <div class="stat-cell"><div class="stat-cell__num">${S.checkins.length}</div><div class="stat-cell__label">累计打卡</div></div>
         <div class="stat-cell"><div class="stat-cell__num">${rate}%</div><div class="stat-cell__label">总正确率</div></div>
         <div class="stat-cell"><div class="stat-cell__num">${S.mockRuns.length}</div><div class="stat-cell__label">模考次数</div></div>
-        <div class="stat-cell"><div class="stat-cell__num">${avgSec ? Math.floor(avgSec / 60) + '′' : '—'}</div><div class="stat-cell__label">平均用时</div></div>
+        <div class="stat-cell"><div class="stat-cell__num stat-cell__num--hm">${fmtHM(avgSec)}</div><div class="stat-cell__label">平均用时</div></div>
       </div>
       <div class="sec-head"><span class="sec-head__no">§</span><h2>近七日活跃</h2><span class="sec-head__note">每天的学习足迹</span></div>
       <div class="chart-wrap"><div class="bars">${bars}</div><div class="chart-legend"><span><i class="legend-dot" style="background:var(--pine)"></i>学习活跃度</span><span><i class="legend-dot" style="background:var(--accent)"></i>今天</span></div></div>
-      <div class="sec-head"><span class="sec-head__no">§</span><h2>打卡日历</h2><span class="sec-head__note">近 30 天 · 每格一天</span></div>
-      <div class="chart-wrap"><div class="heatmap">${cells}</div><div class="chart-legend"><span>浅色未打卡，深色已打卡</span></div></div>
+      <div class="sec-head"><span class="sec-head__no">§</span><h2>近七天单词记忆数</h2><span class="sec-head__note">当日点「已记背」的次数</span></div>
+      <div class="chart-wrap">${lineChart}</div>
+      <div class="sec-head"><span class="sec-head__no">§</span><h2>打卡日历</h2><span class="sec-head__note">按月查看 · 近四年</span></div>
+      <div class="chart-wrap">
+        <div class="cal" id="checkinCal"></div>
+        <div class="chart-legend"><span><i class="legend-dot" style="background:var(--accent)"></i>当日已打卡</span><span>范围：${new Date().getFullYear() - 4}年11月 至今</span></div>
+      </div>
       <div style="text-align:center;margin-top:var(--sp-5)"><button class="btn" id="goMock">去做一次模考 →</button></div>
     `;
     $('#goMock').addEventListener('click', () => navigate('mock'));
+
+    // 月历：每次进入进度视图都初始化为当天所在月份
+    const now = new Date();
+    const minYM = (now.getFullYear() - 4) * 12 + 10;  // 今年-4 年的 11 月（0-based 月=10）
+    const maxYM = now.getFullYear() * 12 + now.getMonth();
+    let curYM = maxYM; // 重置为当月，避免停留在上次翻看的月份
+    const checked = new Set(S.checkins);
+    const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+    const calBox = $('#checkinCal');
+    const renderCal = () => {
+      const y = Math.floor(curYM / 12), m = curYM % 12;
+      const firstDow = new Date(y, m, 1).getDay();
+      const dim = new Date(y, m + 1, 0).getDate();
+      const todayKey = now.toISOString().slice(0, 10);
+      let cells = WEEK.map(w => `<span class="cal-wd">${w}</span>`).join('');
+      for (let i = 0; i < firstDow; i++) cells += '<span class="cal-cell is-blank"></span>';
+      let monthCount = 0;
+      for (let d = 1; d <= dim; d++) {
+        const key = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const on = checked.has(key);
+        if (on) monthCount++;
+        const isToday = key === todayKey;
+        cells += `<span class="cal-cell ${on ? 'is-on' : ''} ${isToday ? 'is-today' : ''}" title="${key}${on ? ' · 已打卡' : ''}">${d}</span>`;
+      }
+      calBox.innerHTML = `
+        <div class="cal-head">
+          <button class="cal-nav" id="calPrev" ${curYM <= minYM ? 'disabled' : ''} aria-label="上个月">‹</button>
+          <strong class="cal-title">${y} 年 ${m + 1} 月</strong>
+          <button class="cal-nav" id="calNext" ${curYM >= maxYM ? 'disabled' : ''} aria-label="下个月">›</button>
+          <span class="cal-month-count">本月打卡 ${monthCount} 天</span>
+        </div>
+        <div class="cal-grid">${cells}</div>`;
+      $('#calPrev').addEventListener('click', () => { if (curYM > minYM) { curYM--; renderCal(); } });
+      $('#calNext').addEventListener('click', () => { if (curYM < maxYM) { curYM++; renderCal(); } });
+    };
+    renderCal();
   };
 
   /* ---------- 资源导航 ---------- */
