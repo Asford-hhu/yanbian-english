@@ -335,7 +335,7 @@
   /* ---------- 4. 路由 ---------- */
   const VIEW_META = {
     dashboard: { title: '今日概览', mark: '序', lede: '砚边与你同在，English 重塑未来。', folio: 'FOLIO 01' },
-    study:     { title: '研习路径', mark: '壹', lede: '四步功课，从输入到输出，稳稳地把水平提上去。', folio: 'FOLIO 02' },
+    study:     { title: '研习路径', mark: '壹', lede: '四步功课，稳稳进阶。', folio: 'FOLIO 02' },
     reading:   { title: '阅读', mark: '贰', lede: '精读一篇，胜过泛读十篇。', folio: 'FOLIO 03' },
     writing:   { title: '写作表达库', mark: '叁', lede: '积累有质感的高级表达，而非套路模板。', folio: 'FOLIO 04' },
     vocab:     { title: '语境词汇', mark: '肆', lede: '在句子里记住一个词，才算真正拥有它。', folio: 'FOLIO 05' },
@@ -344,7 +344,7 @@
     mock:      { title: '模考计时', mark: '柒', lede: '在时间里练习，才能在考场上从容。', folio: 'FOLIO 08' },
     stats:     { title: '学习进度', mark: '捌', lede: '看得见的进步，才撑得起长期的坚持。', folio: 'FOLIO 09' },
     music:     { title: '英文音乐', mark: '拾', lede: '听歌磨耳朵，让语感在旋律里慢慢长出来。', folio: 'FOLIO 11' },
-    news:      { title: '外刊速览', mark: '拾壹', lede: '每天读一点真实世界的新闻，把英语读成窗口。', folio: 'FOLIO 12' },
+    news:      { title: '外刊速览', mark: '拾壹', lede: '每天一点，读懂世界。', folio: 'FOLIO 12' },
     resources: { title: '资源导航', mark: '玖', lede: '站在优质资源的肩上，少走弯路。', folio: 'FOLIO 10' }
   };
   let currentView = 'dashboard';
