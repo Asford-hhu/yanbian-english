@@ -323,7 +323,7 @@
         <div class="res-q__h"><b>${q.no}. ${q.type==='listening'?'【听力】':'【阅读】'}</b> <span>${ok?'✓ 正确':'✗ 错误'}</span></div>
         ${q.q?`<div class="res-q__stem">${esc(q.q)}</div>`:''}
         ${passage}
-        <div class="res-q__opts">${q.opts.map((o,i)=>o?`<div class="${i===q.answer?'is-ans':(i===chosen?'is-chosen':'')}">${'ABCD'[i]}. ${esc(o)} ${i===q.answer?'（正确）':''}${i===chosen&&chosen!==q.answer?'（你的选择）':''}</div>`:'').join('')}</div>
+        <div class="res-q__opts">${q.opts.map((o,i)=>o?`<div class="${i===q.answer?'is-ans':(i===chosen?'is-chosen':'')}">(${String.fromCharCode(65+i)}) ${esc(o)} ${i===q.answer?'（正确）':''}${i===chosen&&chosen!==q.answer?'（你的选择）':''}</div>`:'').join('')}</div>
         <div class="res-q__why"><b>解析：</b>${esc(q.why)}</div>
       </div>`;
     }).join('');
