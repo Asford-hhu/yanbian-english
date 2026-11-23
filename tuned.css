@@ -588,3 +588,23 @@ body { color: var(--text-main); }
   .cal-cell { font-size: .72rem; border-radius: 4px; }
   .cal-grid { gap: 3px; }
 }
+
+/* ---------- 听说：分组筛选（级别 / 难度 / 状态）+ 文章下拉 ---------- */
+.listen-filters { align-items: center; }
+.flt-label {
+  font-family: var(--font-serif); font-size: .86rem; color: var(--ink-soft);
+  white-space: nowrap;
+}
+.flt-sep {
+  width: 1px; height: 18px; margin: 0 var(--sp-2);
+  background: var(--rule);
+}
+.lcount { margin-left: auto; white-space: nowrap; }
+#listeningSelect { min-width: min(360px, 100%); }
+@media (max-width: 720px) {
+  .listen-filters { gap: 6px; }
+  .flt-label { font-size: .78rem; }
+  .flt-sep { display: none; }
+  .lcount { margin-left: 0; }
+  #listeningSelect { width: 100%; }
+}
