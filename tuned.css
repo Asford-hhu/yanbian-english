@@ -474,6 +474,13 @@ body { color: var(--text-main); }
 }
 .read-done-remove:hover { background: var(--accent-wash); }
 
+/* ---------- 数据管理弹窗：备份区用不透明卡片，避免透出底层页面 ---------- */
+#dataModal .modal__card {
+  background: var(--paper) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 /* ---------- 音乐歌词独立弹窗（沿用站点 .modal 风格） ---------- */
 .music-lyric__card { width: min(560px, 100%); max-height: min(78vh, 720px); display: flex; flex-direction: column; }
 .music-lyric__head { flex: 0 0 auto; padding-right: var(--sp-5); }
