@@ -103,3 +103,23 @@
     to   { opacity: 1; }
   }
 }
+
+/* 9) 弱网首屏已出现、但大体积数据脚本仍在下载时，切到后半模块会短暂空白。
+   纯 CSS 加载反馈：不改 DOM、不改文案、不改渲染与判分逻辑；内容注入后 :empty 自动失效。 */
+.view.is-active:empty::before {
+  content: "";
+  display: block;
+  width: 24px;
+  height: 24px;
+  margin: 72px auto;
+  border: 2px solid rgba(148, 163, 184, .38);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: yb-view-loading-spin .8s linear infinite;
+}
+@keyframes yb-view-loading-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view.is-active:empty::before { animation: none; }
+}

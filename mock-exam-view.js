@@ -200,15 +200,10 @@
     }).join('');
 
     return `<div class="mock-exam">
-      <div class="card" style="border-left:3px solid var(--accent);margin-bottom:var(--sp-5)">
+      <div class="card" style="border-left:3px solid var(--accent);margin-bottom:var(--sp-4);padding:var(--sp-4) var(--sp-5)">
         <div class="card__label">Real Exam · 真题模考</div>
-        <p style="font-family:var(--font-body);margin:0;color:var(--text-secondary);line-height:1.85">
-          2026年6月 <b>四级 / 六级</b> 官方真题，含听力原声、长篇阅读匹配与仔细阅读，<b>已剔除作文与翻译</b>。
-          时长按<b>教育部教育考试院官方规定</b>设置：听力四级 25 分钟／六级 30 分钟；官方阅读理解 40 分钟含选词填空、长篇阅读、仔细阅读三类，
-          本站模考<b>全部为客观题</b>（无选词填空、写作、翻译），故阅读按长篇阅读 15 + 仔细阅读 20 = <b>35 分钟</b>计。
-          含听力卷为两者之和（四级 60／六级 65 分钟），无听力卷为 35 分钟。
-          选卷开考后，听力<b>仅可播放一次</b>（播放前二次确认，播放中不可暂停或拖动）；各部分可自由切换、随时改答案；
-          交卷或倒计时结束自动判分，答错自动进错题本并附原题解析。中途切换到其它功能将<b>重置本卷进度</b>。
+        <p style="font-family:var(--font-body);margin:0;color:var(--text-secondary);font-size:.88rem;line-height:1.65">
+          2026年6月 <b>四级 / 六级</b> 官方真题（听力 + 长篇阅读匹配 + 仔细阅读，已剔除作文与翻译）；本站全为客观题，按官方规则折算阅读 <b>35 分钟</b>，含听力卷四级 <b>60</b> / 六级 <b>65</b> 分钟。
         </p>
       </div>
       <div class="filter-bar" style="flex-wrap:wrap;gap:8px;margin-bottom:var(--sp-4)">${tabs}</div>
