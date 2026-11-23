@@ -296,9 +296,11 @@
         const done = S.practice.listening[key];
         return `<div class="question">
           <div class="question__q">${i + 1}. ${esc(b.sent)}</div>
-          <input class="blank-input" data-key="${key}" data-answer="${esc(ans)}" value="${esc(val)}" placeholder="听后填空"
-            style="font-family:var(--font-serif);padding:8px 12px;border:1px solid var(--rule-strong);border-radius:var(--radius);background:var(--paper);width:min(280px,100%)">
-          ${done ? `<span style="font-family:var(--font-serif);font-size:.85rem;margin-left:10px;color:${done.correct ? 'var(--success)' : 'var(--danger)'}">${done.correct ? '✓ 正确' : '✗ 正确答案：' + esc(ans)}</span>` : ''}
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <input class="blank-input" data-key="${key}" data-answer="${esc(ans)}" value="${esc(val)}" placeholder="听后填空"
+              style="font-family:var(--font-serif);padding:8px 12px;border:1px solid var(--rule-strong);border-radius:var(--radius);background:var(--paper);width:min(280px,100%)">
+            ${done ? `<span style="font-family:var(--font-serif);font-size:.85rem;white-space:nowrap;color:${done.correct ? 'var(--success)' : 'var(--danger)'}">${done.correct ? '✓ 正确' : '✗ 正确答案：' + esc(ans)}</span>` : ''}
+          </div>
         </div>`;
       }).join('');
       // 逐行渲染台词：角色名单独标签显示（配音里不读角色名）
