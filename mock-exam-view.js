@@ -1,7 +1,7 @@
 /* ============================================================
    砚边 · 真题模考模块（mock-exam-view.js）
    ------------------------------------------------------------
-   · 2026年6月 四级/六级真题（听力 + 仔细阅读），作文翻译已剔除
+   · 2026年6月 四级/六级真题（听力 + 长篇阅读匹配 + 仔细阅读），作文翻译已剔除
    · 分区：四级真题 / 六级真题 / 我的收藏 / 已完成
    · 自主选卷 → 计时答题 → 各部分自由切换/改答案 → 交卷或倒计时自动提交
    · 听力：二次确认后播放一次，不可暂停/拖拽/倍速
@@ -203,7 +203,7 @@
       <div class="card" style="border-left:3px solid var(--accent);margin-bottom:var(--sp-5)">
         <div class="card__label">Real Exam · 真题模考</div>
         <p style="font-family:var(--font-body);margin:0;color:var(--text-secondary);line-height:1.85">
-          2026年6月 <b>四级 / 六级</b> 官方真题，含听力原声与仔细阅读，<b>已剔除作文与翻译</b>。
+          2026年6月 <b>四级 / 六级</b> 官方真题，含听力原声、长篇阅读匹配与仔细阅读，<b>已剔除作文与翻译</b>。
           选卷开考后，听力<b>仅可播放一次</b>（播放前二次确认，播放中不可暂停或拖动）；各部分可自由切换、随时改答案；
           交卷或倒计时结束自动判分，答错自动进错题本并附原题解析。中途切换到其它功能将<b>重置本卷进度</b>。
         </p>
@@ -217,8 +217,10 @@
   function sectionsOf(exam) {
     const secs = [];
     const lis = exam.questions.filter(q=>q.type==='listening');
+    const mat = exam.questions.filter(q=>q.type==='matching');
     const rea = exam.questions.filter(q=>q.type==='reading');
     if (lis.length) secs.push({ key:'listening', name:'听力理解', qs:lis });
+    if (mat.length) secs.push({ key:'matching', name:'长篇阅读匹配', qs:mat });
     if (rea.length) secs.push({ key:'reading', name:'仔细阅读', qs:rea });
     return secs;
   }
@@ -253,7 +255,7 @@
       </div>`;
     }
     const passage = (!isListen && q.passage) ? `<details class="mock-passage"><summary>查看本文原文</summary><div>${esc(q.passage)}</div></details>` : '';
-    const opts = q.opts.map((o,i)=> o ? `<button class="opt ${chosen===i?'is-selected':''}" data-mopt="${i}"><span class="opt__key">${'ABCD'[i]}</span><span>${esc(o)}</span></button>` : '').join('');
+    const opts = q.opts.map((o,i)=> o ? `<button class="opt ${chosen===i?'is-selected':''}" data-mopt="${i}"><span class="opt__key">${String.fromCharCode(65+i)}</span><span>${esc(o)}</span></button>` : '').join('');
     return `<div class="mock-qhead">
         <span class="card__label">${exam.title} · ${sec.name}</span>
         <span class="mock-qno">第 ${q.no} 题</span>
@@ -320,7 +322,7 @@
       const ok = chosen === q.answer;
       const passage = (!q.passage ? '' : `<details class="mock-passage"><summary>原题材料</summary><div>${esc(q.passage)}</div></details>`);
       return `<div class="res-q ${ok?'is-right':'is-wrong'}">
-        <div class="res-q__h"><b>${q.no}. ${q.type==='listening'?'【听力】':'【阅读】'}</b> <span>${ok?'✓ 正确':'✗ 错误'}</span></div>
+        <div class="res-q__h"><b>${q.no}. ${q.type==='listening'?'【听力】':(q.type==='matching'?'【匹配】':'【阅读】')}</b> <span>${ok?'✓ 正确':'✗ 错误'}</span></div>
         ${q.q?`<div class="res-q__stem">${esc(q.q)}</div>`:''}
         ${passage}
         <div class="res-q__opts">${q.opts.map((o,i)=>o?`<div class="${i===q.answer?'is-ans':(i===chosen?'is-chosen':'')}">(${String.fromCharCode(65+i)}) ${esc(o)} ${i===q.answer?'（正确）':''}${i===chosen&&chosen!==q.answer?'（你的选择）':''}</div>`:'').join('')}</div>
