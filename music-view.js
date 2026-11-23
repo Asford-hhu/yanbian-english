@@ -198,8 +198,11 @@
       $$('[data-mid]', root).forEach(b => b.addEventListener('click', () => {
         const next = MUSIC.find(m => String(m.id) === b.dataset.mid);
         if (!next) return;
+        const y = window.scrollY;
         current = next;
-        render(true);
+        // 不抢搜索框焦点，避免 render 后滚动跳回顶部
+        render();
+        window.scrollTo({ top: y, behavior: 'instant' });
       }));
       $$('[data-lyric]', root).forEach(b => b.addEventListener('click', () => {
         const next = MUSIC.find(m => String(m.id) === b.dataset.lyric);

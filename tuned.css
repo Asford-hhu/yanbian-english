@@ -527,6 +527,33 @@ body { color: var(--text-main); }
 }
 .music-card.is-playing { border-color: var(--accent); box-shadow: var(--glow-strong); }
 
+/* 桌面端：播放中的卡片横向铺满一行，音频进度条随之拉长，方便拖动选时间点 */
+@media (min-width: 721px) {
+  .music-card.is-playing {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    grid-template-areas: "cover body" "player player";
+    align-items: stretch;
+  }
+  .music-card.is-playing .music-card__cover-wrap {
+    grid-area: cover;
+    height: 100%;
+    min-height: 132px;
+  }
+  .music-card.is-playing .music-card__body {
+    grid-area: body;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .music-card.is-playing > .music-player-bar { grid-area: player; }
+  .music-card.is-playing .music-player-bar audio {
+    width: 100% !important;
+    height: 48px !important;
+  }
+}
+
 /* 就地播放器：嵌在卡片内，去掉原来的 sticky 底部悬浮 */
 .music-card > .music-player-bar {
   position: static !important; bottom: auto !important; z-index: auto !important;
