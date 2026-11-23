@@ -167,14 +167,17 @@
         if (!S.vocabDaily || typeof S.vocabDaily !== 'object' || Array.isArray(S.vocabDaily)) S.vocabDaily = {};
         const dk = new Date().toISOString().slice(0, 10);
         S.vocabDaily[dk] = (S.vocabDaily[dk] || 0) + 1;
-        save(); toast(`「${w}」已记背 ${S.vocabMarked[w]} 次`); render(true); return;
+        save(); toast(`「${w}」已记背 ${S.vocabMarked[w]} 次`);
+        // 不抢搜索框焦点，即时恢复当前浏览位置（避免 smooth 滚动造成页面滑动）
+        const y = window.scrollY; render(); window.scrollTo({ top: y, behavior: 'instant' }); return;
       }
       const sv = t.closest('[data-save]');
       if (sv) {
         const w = sv.dataset.save;
         if (S.vocabSaved.includes(w)) { S.vocabSaved = S.vocabSaved.filter(x => x !== w); toast('已从生词本移除'); }
         else { S.vocabSaved.push(w); toast('已加入生词本'); }
-        save(); render(true);
+        save();
+        const y = window.scrollY; render(); window.scrollTo({ top: y, behavior: 'instant' });
       }
     };
     root.__vbInput = function (e) {
