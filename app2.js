@@ -463,17 +463,77 @@
     return before + '<mark class="key-sent">' + key + '</mark>' + after;
   }
 
+  let mistakeTab = '全部';
+
+  // 听说听写填空的错题原本只存在练习记录里，这里折算成错题卡，不改判分与记录结构
+  function derivedListeningMistakes(S) {
+    const out = [];
+    const records = (S && S.practice && S.practice.listening) || {};
+    Object.keys(records).forEach(key => {
+      const rec = records[key];
+      if (!rec || rec.correct !== false) return;
+      const m = key.match(/^(.+)-b(\d+)$/);
+      if (!m) return;
+      const art = DATA.listening.find(l => l.id === m[1]);
+      const blank = art && art.blanks && art.blanks[+m[2]];
+      if (!art || !blank) return;
+      out.push({
+        id: 'listen:' + key,
+        src: '听说 · ' + art.title,
+        q: blank.sent,
+        opts: [blank.answer],
+        answer: 0,
+        chosen: -1,
+        chosenText: rec.chosen,
+        answerText: blank.answer,
+        why: '听写填空：请重新听原文，核对答案拼写。',
+        _kind: 'listening',
+        _listenKey: key
+      });
+    });
+    return out;
+  }
+
+  function mistakeKind(m) {
+    if (m._kind) return m._kind;
+    if (m.type === 'listening') return 'listening';
+    if (m.type === 'reading') return 'reading';
+    const s = (m.src || '') + ' ' + (m.q || '');
+    if (/听说|听力|listening|【听力题】/i.test(s)) return 'listening';
+    return 'reading';
+  }
+
   R.mistakes = function () {
     const root = $('#view-mistakes');
     const S = getS();
-    if (!S.mistakes.length) {
-      root.innerHTML = `<div class="empty"><span class="empty__mark">✎</span><p>错题本还是空的。去做几道题，答错的会自动收进来。</p><div style="margin-top:var(--sp-4)"><button class="btn btn--primary" data-go="reading">去阅读练习</button></div></div>`;
+    const all = [...derivedListeningMistakes(S), ...(S.mistakes || [])];
+    const listenCount = all.filter(m => mistakeKind(m) === 'listening').length;
+    const readCount = all.length - listenCount;
+    const tabs = `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--sp-4)">
+        ${[['全部', all.length], ['听说错题', listenCount], ['阅读错题', readCount]].map(([k, n]) =>
+          `<button class="filter-chip ${mistakeTab === k ? 'is-active' : ''}" data-mistaketab="${k}">${k} <span style="opacity:.7">${n}</span></button>`
+        ).join('')}
+      </div>`;
+    const bindTabs = () => $$('[data-mistaketab]', root).forEach(b =>
+      b.addEventListener('click', () => { mistakeTab = b.dataset.mistaketab; R.mistakes(); }));
+
+    if (!all.length) {
+      root.innerHTML = tabs + `<div class="empty"><span class="empty__mark">✎</span><p>错题本还是空的。去做几道题，答错的会自动收进来。</p><div style="margin-top:var(--sp-4)"><button class="btn btn--primary" data-go="reading">去阅读练习</button></div></div>`;
+      bindTabs();
       $('[data-go]', root)?.addEventListener('click', () => navigate('reading'));
       return;
     }
-    root.innerHTML = `
-      <div style="font-family:var(--font-serif);color:var(--ink-soft);margin-bottom:var(--sp-4)">共 <b>${S.mistakes.length}</b> 道错题。点开看解析，考点都是提分线索。重练答对后可移除。</div>
-      ${S.mistakes.map((m, i) => {
+
+    const shown = mistakeTab === '听说错题'
+      ? all.filter(m => mistakeKind(m) === 'listening')
+      : mistakeTab === '阅读错题'
+        ? all.filter(m => mistakeKind(m) === 'reading')
+        : all;
+    const label = mistakeTab === '全部' ? '共' : mistakeTab + '共';
+    root.innerHTML = tabs + `
+      <div style="font-family:var(--font-serif);color:var(--ink-soft);margin-bottom:var(--sp-4)">${label} <b>${shown.length}</b> 道。点开看解析，考点都是提分线索。重练答对后可移除。</div>
+      ${shown.map((m, i) => {
         // 阅读练习旧错题没有 passage：按来源标题反查文章正文补齐；模考错题自带 passage
         let passageText = m.passage || '';
         if (!passageText && (m.src || '').indexOf('阅读 · ') === 0) {
@@ -495,11 +555,14 @@
         const passageHtml = passageText
           ? `<details class="mock-passage mistake-passage" open><summary>阅读原文 · 高亮处为关键句</summary><div>${markKeySentence(passageText, kp && kp.anchor)}</div></details>`
           : '';
+        const kind = mistakeKind(m);
+        const chosenText = m.chosenText ?? m.opts?.[m.chosen] ?? '—';
+        const answerText = m.answerText ?? m.opts?.[m.answer] ?? '—';
         return `<div class="card mistake-item" style="margin-bottom:var(--sp-3)">
           <div>
-            <div class="mistake-item__src">${esc(m.src)}</div>
+            <div class="mistake-item__src"><span class="tag ${kind === 'listening' ? 'tag--pine' : ''}" style="margin-right:8px">${kind === 'listening' ? '听说' : '阅读'}</span>${esc(m.src)}</div>
             <div class="mistake-item__q">${i + 1}. ${esc(m.q)}</div>
-            <div class="mistake-item__ans">你选：<i>${esc(m.opts?.[m.chosen] ?? '—')}</i> · 正确：<b>${esc(m.opts?.[m.answer] ?? '—')}</b></div>
+            <div class="mistake-item__ans">你选：<i>${esc(chosenText)}</i> · 正确：<b>${esc(answerText)}</b></div>
             ${passageHtml}
             ${logicHtml}
             <div class="mistake-why">${esc(why)}</div>
@@ -509,12 +572,26 @@
       }).join('')}
       <div style="text-align:center;margin-top:var(--sp-4)"><button class="btn" id="clearMistakes">清空错题本</button></div>
     `;
+    bindTabs();
     $$('.remove-mistake', root).forEach(b => b.addEventListener('click', () => {
-      S.mistakes = S.mistakes.filter(x => x.id !== b.dataset.id); save(); R.mistakes(); toast('已移除');
+      const id = b.dataset.id;
+      if (id.startsWith('listen:')) {
+        const key = id.slice(7);
+        if (S.practice && S.practice.listening) delete S.practice.listening[key];
+      } else {
+        S.mistakes = S.mistakes.filter(x => x.id !== id);
+      }
+      save(); R.mistakes(); toast('已移除');
     }));
     $('#clearMistakes').addEventListener('click', () => {
       if (!confirm('确定清空全部错题？')) return;
-      S.mistakes = []; save(); R.mistakes(); toast('错题本已清空');
+      S.mistakes = [];
+      if (S.practice && S.practice.listening) {
+        Object.keys(S.practice.listening).forEach(k => {
+          if (S.practice.listening[k] && S.practice.listening[k].correct === false) delete S.practice.listening[k];
+        });
+      }
+      save(); R.mistakes(); toast('错题本已清空');
     });
   };
 
@@ -607,7 +684,7 @@
       const chosen = timer.answers[`${timer.sectionIdx}-${qi}`];
       const ok = chosen === q.answer;
       if (ok) correct++;
-      else addMistake({ id: `mock-${timer.sectionIdx}-${qi}`, src: '模考 · ' + sec.name, q: q.q, opts: q.opts, answer: q.answer, chosen: chosen ?? -1, why: q.why });
+      else addMistake({ id: `mock-${timer.sectionIdx}-${qi}`, src: '模考 · ' + sec.name, q: q.q, opts: q.opts, answer: q.answer, chosen: chosen ?? -1, why: q.why, type: sec.key === 'listening' ? 'listening' : 'reading' });
     });
     const S = getS();
     S.mockRuns.push({ ts: Date.now(), score: correct, total: sec.questions.length, seconds: timer.total - timer.remain });

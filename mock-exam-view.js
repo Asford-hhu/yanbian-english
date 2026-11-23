@@ -463,7 +463,7 @@
             q:q.q || (q.type==='listening'?'【听力题】听音频选择（原题见听力音频）':'阅读理解'),
             opts:q.opts, answer:q.answer, chosen:(chosen===undefined?-1:chosen),
             why:(q.passage?('【原题材料】\n'+q.passage+'\n\n'):'')+('【解析】'+q.why),
-            passage:q.passage||''
+            passage:q.passage||'', type:q.type
           });
         }catch(e){}
       }
