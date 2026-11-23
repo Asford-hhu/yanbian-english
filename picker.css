@@ -1,13 +1,14 @@
 /* ============================================================
-   阅读页 · 选篇器（自定义下拉）
+   阅读 / 听说页 · 选篇器（自定义下拉）
    ------------------------------------------------------------
    原生 <select> 的弹出列表由系统绘制：圆角、阴影、选中色都插不上手，
-   深色模式下还会出现"白底白字"看不清。这里把 #readingSelect 收起来，
+   深色模式下还会出现"白底白字"看不清。这里把两个选篇下拉收起来，
    用一个和站点同一套语言的选择器替它：玻璃面板 + 序号 + 级别签 +
    搜索 + 键盘操作；原生 select 仍在 DOM 里，值与 change 事件照旧。
    ============================================================ */
 
-.picker-ready #readingSelect { display: none !important; }
+.picker-ready #readingSelect,
+.picker-ready #listeningSelect { display: none !important; }
 
 .picker { position: relative; flex: 1 1 300px; max-width: 560px; min-width: 0; }
 

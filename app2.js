@@ -198,20 +198,6 @@
 
   /* ---------- 听说训练（多角色配音 + 精准播放器） ---------- */
   let listenRate = 0.95;
-  // 难度映射：结合场景与文本长度人工分级
-  const LISTEN_DIFF = {
-    l1:'易',l2:'中',l3:'易',l4:'中',l5:'中',l6:'难',l7:'中',l8:'易',
-    l9:'易',l10:'易',l11:'中',l12:'易',l13:'易',l14:'中',l15:'难',
-    l16:'中',l17:'易',l18:'中',l19:'中',l20:'中',l21:'中',l22:'中',l23:'难',
-    l24:'中',l25:'易',l26:'中',l27:'中',l28:'中',l29:'难',l30:'易',
-    l31:'中',l32:'易',l33:'中',l34:'难',l35:'中',l36:'中',l37:'中',
-    l38:'易',l39:'难',l40:'难',l41:'中',l42:'易',l43:'难',l44:'中',
-    l45:'中',l46:'中',l47:'难',l48:'易',l49:'难',l50:'中',l51:'易',
-    l52:'易',l53:'中',l54:'易',l55:'中',l56:'难',l57:'难',l58:'易',
-    l59:'易',l60:'难'
-  };
-  const getDiff = (l) => LISTEN_DIFF[l.id] || (l.text.length > 480 ? '难' : l.text.length > 420 ? '中' : '易');
-  const DIFF_CLS = { '易':'tag--pine', '中':'tag', '难':'tag--accent' };
   // 四六级归属：日常/校园/生活服务 → 四级；学术讲座/科研/科技/职场高阶/辩论/心理社会议题 → 六级
   const LISTEN_BAND = {
     l1:4,l2:4,l3:4,l4:4,l5:4,l6:4,l7:4,l8:4,l9:4,l10:4,l11:4,l12:4,l13:4,l14:4,
@@ -251,19 +237,16 @@
   R.listening = function () {
     const root = $('#view-listening');
     const S = getS();
-    // 三组独立筛选：级别(四级/六级) · 难度(易/中/难) · 状态(全部/已完成/收藏)
-    let bandFilter = '全部';
-    let diffFilter = '全部';
-    let statusFilter = '全部';
+    // 单一分区：全部 / 四级 / 六级 / 收藏
+    let listenFilter = '全部';
     const isDone = (l) => (l.blanks || []).every((b, i) => {
       const r = S.practice.listening[`${l.id}-b${i}`];
       return r && r.chosen !== undefined && String(r.chosen).trim() !== '';
     });
     const visibleList = () => DATA.listening.filter(l => {
-      if (bandFilter !== '全部' && bandLabel(l) !== bandFilter) return false;
-      if (diffFilter !== '全部' && getDiff(l) !== diffFilter) return false;
-      if (statusFilter === '已完成' && !isDone(l)) return false;
-      if (statusFilter === '收藏' && !(S.favListening || []).includes(l.id)) return false;
+      if (listenFilter === '四级' && bandLabel(l) !== '四级') return false;
+      if (listenFilter === '六级' && bandLabel(l) !== '六级') return false;
+      if (listenFilter === '收藏' && !(S.favListening || []).includes(l.id)) return false;
       return true;
     });
     let cur = DATA.listening[0];
@@ -272,15 +255,10 @@
 
     const render = () => {
       const list = visibleList();
-      const chipRow = (name, arr, curVal, attr) => `<span class="flt-label">${name}</span>` +
-        arr.map(d => `<button class="filter-chip ${d === curVal ? 'is-active' : ''}" data-${attr}="${d}">${d}</button>`).join('');
       const filterBar = `
         <div class="filter-bar listen-filters">
-          ${chipRow('级别', ['全部','四级','六级'], bandFilter, 'lband')}
-          <span class="flt-sep"></span>
-          ${chipRow('难度', ['全部','易','中','难'], diffFilter, 'ldiff')}
-          <span class="flt-sep"></span>
-          ${chipRow('状态', ['全部','已完成','收藏'], statusFilter, 'lstatus')}
+          <span class="flt-label">分区</span>
+          ${['全部','四级','六级','收藏'].map(d => `<button class="filter-chip ${d === listenFilter ? 'is-active' : ''}" data-lfilter="${d}">${d}</button>`).join('')}
           <span class="tag tag--pine lcount">共 ${list.length} 篇</span>
         </div>`;
       const selectBar = (opts) => `
@@ -294,9 +272,7 @@
           if (nl.length && !nl.includes(cur)) { stopListenAudio(); cur = nl[0]; }
           revealed = false; render();
         };
-        $$('[data-lband]', root).forEach(b => b.addEventListener('click', () => { bandFilter = b.dataset.lband; reselect(); }));
-        $$('[data-ldiff]', root).forEach(b => b.addEventListener('click', () => { diffFilter = b.dataset.ldiff; reselect(); }));
-        $$('[data-lstatus]', root).forEach(b => b.addEventListener('click', () => { statusFilter = b.dataset.lstatus; reselect(); }));
+        $$('[data-lfilter]', root).forEach(b => b.addEventListener('click', () => { listenFilter = b.dataset.lfilter; reselect(); }));
         const sel = $('#listeningSelect');
         if (sel) sel.addEventListener('change', () => {
           const next = DATA.listening.find(l => l.id === sel.value);
@@ -332,7 +308,7 @@
         const body = m ? m[2] : L;
         return `<p class="tl-line" data-line="${i}">${role ? `<span class="tl-role">${esc(role)}</span>` : ''}${esc(body)}</p>`;
       }).join('');
-      const opts = list.map(l => `<option value="${l.id}" ${l.id === cur.id ? 'selected' : ''}>${isDone(l) ? '✓ ' : ''}${esc(l.title)} · ${bandLabel(l)} · ${getDiff(l)}</option>`).join('');
+      const opts = list.map(l => `<option value="${l.id}" ${l.id === cur.id ? 'selected' : ''}>${isDone(l) ? '✓ ' : ''}${esc(l.title)} · ${bandLabel(l)}</option>`).join('');
       root.innerHTML = `
         ${filterBar}
         ${selectBar(opts)}
@@ -341,7 +317,7 @@
             <div class="listen-toprow">
               <button class="listen-play" id="playBtn" aria-label="播放">${PLAY_SVG}</button>
               <div class="listen-toprow__info">
-                <div class="listen-panel__hint"><span class="tag ${BAND_CLS[getBand(cur)]}" style="padding:1px 7px;font-size:.72rem;margin-right:5px">${bandLabel(cur)}</span><span class="tag ${DIFF_CLS[getDiff(cur)]}" style="padding:1px 7px;font-size:.72rem;margin-right:6px">${getDiff(cur)}</span>${esc(cur.level)}<span class="listen-role" id="nowRole"></span></div>
+                <div class="listen-panel__hint"><span class="tag ${BAND_CLS[getBand(cur)]}" style="padding:1px 7px;font-size:.72rem;margin-right:6px">${bandLabel(cur)}</span>${esc(cur.level)}<span class="listen-role" id="nowRole"></span></div>
                 <div class="listen-progress">
                   <input class="listen-seek" id="seekBar" type="range" min="0" max="1000" value="0" aria-label="播放进度">
                   <span class="listen-time"><span id="tCur">0:00</span> / <span id="tDur">0:00</span></span>
@@ -441,7 +417,7 @@
         S.favListening = S.favListening || [];
         if (S.favListening.includes(id)) { S.favListening = S.favListening.filter(x => x !== id); toast('已取消收藏'); }
         else { S.favListening.push(id); toast('已收藏材料'); }
-        if (statusFilter === '收藏' && !S.favListening.includes(id)) statusFilter = '全部';
+        if (listenFilter === '收藏' && !S.favListening.includes(id)) listenFilter = '全部';
         save(); render();
       });
       const tt = $('#transcriptText');

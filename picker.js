@@ -1,12 +1,12 @@
 /* ============================================================
-   阅读页 · 选篇器
+   阅读 / 听说页 · 选篇器
    ------------------------------------------------------------
-   把 #readingSelect 换成自定义下拉，但不改 app.js 一行：
+   把 #readingSelect、#listeningSelect 换成自定义下拉，但不改业务脚本一行：
    - 原生 select 留在 DOM 里（只是视觉上隐藏），选中后写回 value
-     并派发 change 事件，app.js 原有的监听照常工作；
-   - 视图重渲染（切类别、答题）时用 MutationObserver 重新接管；
+     并派发 change 事件，原有监听照常工作；
+   - 视图重渲染（切分区、答题）时用 MutationObserver 重新接管；
    - 支持搜索、↑↓ 选择、↵ 确认、Esc 关闭、点外部关闭。
-   删掉这个 <script> 与 picker.css，阅读页立刻退回原生下拉。
+   删掉这个 <script> 与 picker.css，两个页面立刻退回原生下拉。
    ============================================================ */
 (function () {
   'use strict';
@@ -267,18 +267,20 @@
   }
 
   function scan() {
-    var sels = document.querySelectorAll('select#readingSelect');
+    var sels = document.querySelectorAll('select#readingSelect, select#listeningSelect');
     for (var i = 0; i < sels.length; i++) enhance(sels[i]);
   }
 
   function boot() {
     scan();
-    var view = document.getElementById('view-reading');
-    if (!view) return;
-    new MutationObserver(function () {
-      if (boot._t) return;
-      boot._t = requestAnimationFrame(function () { boot._t = null; scan(); });
-    }).observe(view, { childList: true, subtree: true });
+    ['view-reading', 'view-listening'].forEach(function (id) {
+      var view = document.getElementById(id);
+      if (!view) return;
+      new MutationObserver(function () {
+        if (boot._t) return;
+        boot._t = requestAnimationFrame(function () { boot._t = null; scan(); });
+      }).observe(view, { childList: true, subtree: true });
+    });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

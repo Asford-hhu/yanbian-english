@@ -616,7 +616,7 @@ body { color: var(--text-main); }
   .cal-grid { gap: 3px; }
 }
 
-/* ---------- 听说：分组筛选（级别 / 难度 / 状态）+ 文章下拉 ---------- */
+/* ---------- 听说：单一分区筛选 + 主题选篇器 ---------- */
 .listen-filters { align-items: center; }
 .flt-label {
   font-family: var(--font-serif); font-size: .86rem; color: var(--ink-soft);
