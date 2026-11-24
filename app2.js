@@ -446,6 +446,10 @@
     if (!anchor || !text) return esc(text);
     const i = text.indexOf(anchor);
     if (i < 0) return esc(text);
+    // 锚点本身已是完整句子时，直接高亮该句，避免跨到上一句
+    if (/[.!?][”"'’]?$/.test(anchor)) {
+      return esc(text.slice(0, i)) + '<mark class="key-sent">' + esc(anchor) + '</mark>' + esc(text.slice(i + anchor.length));
+    }
     // 向左扩展到句首（句末标点后或段落开头）
     let s = i;
     while (s > 0) {
