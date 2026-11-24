@@ -127,7 +127,7 @@
       root.innerHTML = `
         <div class="filter-bar">${chips}
           <button class="btn btn--sm btn--outline" id="vocab-shuffle" style="margin-left:auto" title="重新随机排列，换一批单词积累">↻ 换一批</button>
-          <button class="btn btn--sm btn--outline" id="vocab-quiz-entry" title="随机抽 10 个词做选择题">◎ 随机小测</button>
+          <button class="btn btn--sm btn--outline" id="vocab-quiz-entry" title="随机抽 10 个词做选择题"><svg class="vq-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="12" height="12" rx="2" transform="rotate(-10 9.5 10.5)"/><rect x="8.5" y="7.5" width="12" height="12" rx="2"/><path d="M11.5 11.5h6M11.5 14.5h6M11.5 17.5h3.5"/></svg><span>随机小测</span></button>
         </div>
         <div class="vocab-search">
           <input type="search" id="vocab-q" placeholder="搜单词、释义…共 ${VOCAB_ALL.length} 词" value="${esc(query)}" autocomplete="off">

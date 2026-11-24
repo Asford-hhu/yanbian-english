@@ -1,27 +1,54 @@
 /* 词汇随机小测 —— 仅补布局，颜色/间距全部走既有 token，自动适配浅色与深色主题 */
 
-/* 随机小测入口：琥珀金实心，区别于其它描边按钮，浅/深主题各自保证对比度。只改颜色，不动尺寸与排版。 */
+/* 词汇页筛选行改为居中对齐：默认 stretch 会把同行按钮拉到同高，
+   导致"更大更高"的小测按钮把筛选胶囊也一起撑高，对比不出来。 */
+#view-vocab .filter-bar { align-items: center !important; }
+
+/* 随机小测入口：亮紫实底 + 白字，比筛选胶囊更大更高，带轻微内发光。
+   图标为卡片叠层小画，实色填充、与文字同色（currentColor）。浅/深主题各调一档保证观感。 */
 #view-vocab #vocab-quiz-entry {
-  --vq-cta-bg:     oklch(84% 0.135 74);
-  --vq-cta-bg-hov: oklch(79% 0.145 72);
-  --vq-cta-ink:    oklch(29% 0.09 55);
-  --vq-cta-line:   oklch(73% 0.15 70);
+  --vq-cta-bg:     oklch(63% 0.21 292);
+  --vq-cta-bg-hov: oklch(58% 0.22 292);
+  --vq-cta-ink:    #fff;
+  --vq-cta-line:   oklch(60% 0.20 292);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  min-height: 54px !important;
+  padding: 12px 20px !important;
+  border-radius: 14px !important;
+  font-size: .98rem !important;
+  font-weight: 600 !important;
   background: var(--vq-cta-bg) !important;
   border-color: var(--vq-cta-line) !important;
   color: var(--vq-cta-ink) !important;
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .28) !important;
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / .34),
+    inset 0 0 12px oklch(88% 0.10 292 / .30),
+    0 4px 14px oklch(55% 0.22 292 / .28) !important;
 }
 #view-vocab #vocab-quiz-entry:hover {
   background: var(--vq-cta-bg-hov) !important;
   border-color: var(--vq-cta-line) !important;
   color: var(--vq-cta-ink) !important;
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / .40),
+    inset 0 0 16px oklch(90% 0.10 292 / .38),
+    0 6px 20px oklch(55% 0.22 292 / .36) !important;
 }
 :root[data-theme="dark"] #view-vocab #vocab-quiz-entry {
-  --vq-cta-bg:     oklch(74% 0.14 76);
-  --vq-cta-bg-hov: oklch(79% 0.145 76);
-  --vq-cta-ink:    oklch(23% 0.07 58);
-  --vq-cta-line:   oklch(80% 0.14 76);
+  --vq-cta-bg:     oklch(66% 0.20 292);
+  --vq-cta-bg-hov: oklch(71% 0.19 292);
+  --vq-cta-line:   oklch(64% 0.20 292);
 }
+/* 卡片叠层小图标：实色填充，随文字色（白），细线层次不透明 */
+#view-vocab #vocab-quiz-entry .vq-ico {
+  width: 21px; height: 21px; flex: none;
+  fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linejoin: round; stroke-linecap: round;
+}
+#view-vocab #vocab-quiz-entry .vq-ico rect:first-of-type { fill: currentColor; stroke: none; }
 
 #view-vocab .vq-head {
   display: flex; align-items: center; justify-content: space-between;
