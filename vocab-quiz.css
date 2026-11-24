@@ -1,0 +1,112 @@
+/* 词汇随机小测 —— 仅补布局，颜色/间距全部走既有 token，自动适配浅色与深色主题 */
+#view-vocab .vq-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-3);
+}
+#view-vocab .vq-step { font-family: var(--font-serif); color: var(--ink-soft); font-size: .92rem; }
+
+#view-vocab .vq-bar {
+  height: 6px; border-radius: 999px; background: var(--rule);
+  overflow: hidden; margin-bottom: var(--sp-4);
+}
+#view-vocab .vq-bar > i {
+  display: block; height: 100%; background: var(--accent);
+  border-radius: 999px; transition: width .25s ease;
+}
+
+#view-vocab .vq-card { padding: var(--sp-6); }
+#view-vocab .vq-wordrow {
+  display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap;
+  margin-bottom: var(--sp-2);
+}
+#view-vocab .vq-word {
+  font-family: var(--font-display); font-size: 2rem; font-weight: 800;
+  letter-spacing: -.02em; color: var(--ink);
+}
+#view-vocab .vq-phon { font-family: var(--font-display); color: var(--ink-faint); font-size: .95rem; }
+#view-vocab .vq-say { margin-left: auto; }
+#view-vocab .vq-ask {
+  font-family: var(--font-serif); color: var(--ink-faint);
+  font-size: .88rem; margin-bottom: var(--sp-4);
+}
+
+#view-vocab .vq-opts {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);
+}
+#view-vocab .vq-opts .opt {
+  width: 100%; min-height: 44px; text-align: left; line-height: 1.5;
+}
+#view-vocab .vq-opts .opt span:last-child {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#view-vocab .vq-opts .opt[disabled] { cursor: default; }
+
+#view-vocab .vq-actions {
+  display: flex; gap: var(--sp-2); flex-wrap: wrap;
+  margin-top: var(--sp-4);
+}
+#view-vocab .vq-actions .btn { min-height: 40px; }
+#view-vocab .vq-actions #vq-next[hidden] { display: none; }
+#view-vocab .feedback[hidden] { display: none; }
+
+/* 结果页 */
+#view-vocab .vq-result { padding-top: var(--sp-2); }
+#view-vocab .vq-score {
+  font-family: var(--font-display); font-weight: 800; letter-spacing: -.03em;
+  color: var(--ink); line-height: 1;
+}
+#view-vocab .vq-score b { font-size: 3.4rem; }
+#view-vocab .vq-score span { font-size: 1.4rem; color: var(--ink-faint); margin-left: 2px; }
+#view-vocab .vq-stats {
+  font-family: var(--font-serif); color: var(--ink-soft);
+  font-size: .95rem; margin-top: var(--sp-2);
+}
+#view-vocab .vq-verdict {
+  font-family: var(--font-serif); color: var(--ink);
+  font-size: 1rem; margin-top: var(--sp-2);
+}
+#view-vocab .vq-sub {
+  font-family: var(--font-serif); color: var(--ink-faint);
+  font-size: .88rem; margin: var(--sp-5) 0 var(--sp-3);
+}
+#view-vocab .vq-tip {
+  font-family: var(--font-serif); color: var(--ink-faint);
+  font-size: .82rem; margin-top: var(--sp-3);
+}
+
+/* 错词卡片 */
+#view-vocab .vq-wrong__head {
+  display: flex; align-items: baseline; gap: var(--sp-2);
+  flex-wrap: wrap; margin-bottom: var(--sp-2);
+}
+#view-vocab .vq-wrong__word { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; }
+#view-vocab .vq-wrong__phon { font-style: normal; color: var(--ink-faint); font-size: .88rem; }
+#view-vocab .vq-wrong__meaning {
+  font-family: var(--font-serif); color: var(--ink-soft);
+  font-size: .9rem; line-height: 1.7;
+}
+#view-vocab .vq-wrong__ops { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+
+/* 错题本「词汇错题」分区（在 #view-mistakes 里） */
+#view-mistakes .vq-mist-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-3); flex-wrap: wrap;
+  font-family: var(--font-serif); color: var(--ink-soft);
+  font-size: .9rem; margin-bottom: var(--sp-4);
+}
+#view-mistakes .vq-mist-ops { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+#view-mistakes .vq-wrong__head { display: flex; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-2); }
+#view-mistakes .vq-wrong__word { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; }
+#view-mistakes .vq-wrong__phon { font-style: normal; color: var(--ink-faint); font-size: .88rem; }
+#view-mistakes .vq-wrong__meaning { font-family: var(--font-serif); color: var(--ink-soft); font-size: .9rem; line-height: 1.7; }
+#view-mistakes .vq-wrong__ops { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+
+@media (max-width: 720px) {
+  #view-vocab .vq-opts { grid-template-columns: 1fr; }
+  #view-vocab .vq-card { padding: var(--sp-4); }
+  #view-vocab .vq-word { font-size: 1.6rem; }
+  #view-vocab .vq-score b { font-size: 2.6rem; }
+  #view-vocab .vq-actions .btn { flex: 1 1 auto; min-height: 44px; }
+  #view-mistakes .vq-mist-head { flex-direction: column; align-items: flex-start; }
+}

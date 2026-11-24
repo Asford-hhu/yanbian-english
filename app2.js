@@ -25,6 +25,8 @@
     (window.YANBIAN_VOCAB_1500 || []).forEach(v => push(v));
     return merged;
   })();
+  // 供 vocab-quiz.js 复用词库
+  window.__YANBIAN__.VOCAB_ALL = VOCAB_ALL;
   // 预计算各难度词条数：筛选 chip 的计数原本每次 render 都要全表扫描两次，这里只算一次
   const VOCAB_LEVEL_COUNT = VOCAB_ALL.reduce((m, v) => { const k = v.level; if (k) m[k] = (m[k] || 0) + 1; return m; }, {});
   // Fisher-Yates 洗牌：每次进入词汇模块换一批顺序，方便日积月累不同的词
@@ -125,6 +127,7 @@
       root.innerHTML = `
         <div class="filter-bar">${chips}
           <button class="btn btn--sm btn--outline" id="vocab-shuffle" style="margin-left:auto" title="重新随机排列，换一批单词积累">↻ 换一批</button>
+          <button class="btn btn--sm btn--outline" id="vocab-quiz-entry" title="随机抽 10 个词做选择题">◎ 随机小测</button>
         </div>
         <div class="vocab-search">
           <input type="search" id="vocab-q" placeholder="搜单词、释义…共 ${VOCAB_ALL.length} 词" value="${esc(query)}" autocomplete="off">
@@ -468,6 +471,7 @@
   }
 
   let mistakeTab = '全部';
+  window.__YANBIAN__.setMistakeTab = t => { mistakeTab = t; };
 
   // 听说听写填空的错题原本只存在练习记录里，这里折算成错题卡，不改判分与记录结构
   function derivedListeningMistakes(S) {
@@ -515,15 +519,16 @@
     const readCount = all.length - listenCount;
     const tabs = `
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--sp-4)">
-        ${[['全部', all.length], ['听说错题', listenCount], ['阅读错题', readCount], ['词汇错题', 0]].map(([k, n]) =>
+        ${[['全部', all.length], ['听说错题', listenCount], ['阅读错题', readCount], ['词汇错题', (S.vocabWrong || []).length]].map(([k, n]) =>
           `<button class="filter-chip ${mistakeTab === k ? 'is-active' : ''}" data-mistaketab="${k}">${k} <span style="opacity:.7">${n}</span></button>`
         ).join('')}
       </div>`;
     const bindTabs = () => $$('[data-mistaketab]', root).forEach(b =>
       b.addEventListener('click', () => { mistakeTab = b.dataset.mistaketab; R.mistakes(); }));
 
-    // 词汇错题分区预留：暂不收集错题，只保留入口与空状态
     if (mistakeTab === '词汇错题') {
+      const Q = window.YANBIAN_VOCAB_QUIZ;
+      if (Q && Q.renderMistakeTab) { Q.renderMistakeTab(root, tabs, bindTabs); return; }
       root.innerHTML = tabs + `<div class="empty"><span class="empty__mark">✎</span><p>词汇错题功能即将开放，敬请期待。</p></div>`;
       bindTabs();
       return;
