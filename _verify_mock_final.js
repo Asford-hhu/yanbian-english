@@ -87,7 +87,7 @@ const getJson = u => new Promise((res, rej) => http.get(u, r => {
   await openResult('CET6-1', 'cet6');
   const optsCheck = await js(`(() => {
     const rows = [...document.querySelectorAll('.res-q__opts > div')];
-    const bad = rows.map(r => r.textContent.trim()).filter(t => !/^\\([A-Z]\\) /.test(t));
+    const bad = rows.map(r => r.textContent.trim()).filter(t => !/^\\([A-Z]\\)(?:\\s|（|$)/.test(t));
     return { total: rows.length, bad: bad.slice(0, 6), badCount: bad.length };
   })()`);
   check('结果页选项全部使用 (A) 格式', optsCheck.badCount === 0, `${optsCheck.badCount}/${optsCheck.total} ${optsCheck.bad.join('|')}`);

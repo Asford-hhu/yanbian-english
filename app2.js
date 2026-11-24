@@ -556,8 +556,10 @@
           ? `<details class="mock-passage mistake-passage" open><summary>阅读原文 · 高亮处为关键句</summary><div>${markKeySentence(passageText, kp && kp.anchor)}</div></details>`
           : '';
         const kind = mistakeKind(m);
-        const chosenText = m.chosenText ?? m.opts?.[m.chosen] ?? '—';
-        const answerText = m.answerText ?? m.opts?.[m.answer] ?? '—';
+        // 长篇阅读匹配的选项是段落字母，错题里同样只显示字母，避免重复贴出整段原文
+        const optLetter = i => Number.isInteger(i) && i >= 0 ? String.fromCharCode(65 + i) : '—';
+        const chosenText = m.type === 'matching' ? optLetter(m.chosen) : (m.chosenText ?? m.opts?.[m.chosen] ?? '—');
+        const answerText = m.type === 'matching' ? optLetter(m.answer) : (m.answerText ?? m.opts?.[m.answer] ?? '—');
         return `<div class="card mistake-item" style="margin-bottom:var(--sp-3)">
           <div>
             <div class="mistake-item__src"><span class="tag ${kind === 'listening' ? 'tag--pine' : ''}" style="margin-right:8px">${kind === 'listening' ? '听说' : '阅读'}</span>${esc(m.src)}</div>

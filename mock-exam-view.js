@@ -253,7 +253,10 @@
       </div>`;
     }
     const passage = (!isListen && q.passage) ? `<details class="mock-passage"><summary>查看本文原文</summary><div>${esc(q.passage)}</div></details>` : '';
-    const opts = q.opts.map((o,i)=> o ? `<button class="opt ${chosen===i?'is-selected':''}" data-mopt="${i}"><span class="opt__key">${String.fromCharCode(65+i)}</span><span>${esc(o)}</span></button>` : '').join('');
+    // 长篇阅读匹配：选项只给段落字母，段落全文只在上方折叠原文区出现一次
+    const isMatch = q.type === 'matching';
+    const letter = i => String.fromCharCode(65+i);
+    const opts = q.opts.map((o,i)=> o ? `<button class="opt ${isMatch?'opt--letter':''} ${chosen===i?'is-selected':''}" data-mopt="${i}"><span class="opt__key">${letter(i)}</span>${isMatch?'':`<span>${esc(o)}</span>`}</button>` : '').join('');
     return `<div class="mock-qhead">
         <span class="card__label">${exam.title} · ${sec.name}</span>
         <span class="mock-qno">第 ${q.no} 题</span>
@@ -261,7 +264,7 @@
       ${media}${passage}
       <div class="question">
         <div class="question__q">${isListen?'听音频，选择最佳答案。':esc(q.q)}</div>
-        <div class="question__opts">${opts}</div>
+        <div class="question__opts ${isMatch?'question__opts--letters':''}">${opts}</div>
       </div>
       <div class="mock-qnav">
         <button class="btn btn--sm" data-mprev ${!hasPrev()?'disabled':''}>← 上一题</button>
@@ -319,11 +322,18 @@
       const chosen = result.answers[q.id];
       const ok = chosen === q.answer;
       const passage = (!q.passage ? '' : `<details class="mock-passage"><summary>原题材料</summary><div>${esc(q.passage)}</div></details>`);
+      const isMatch = q.type === 'matching';
+      const letter = i => String.fromCharCode(65+i);
+      const optState = i => `${i===q.answer?'is-ans':(i===chosen?'is-chosen':'')}`;
+      const optTag = i => `${i===q.answer?'（正确）':''}${i===chosen&&chosen!==q.answer?'（你的选择）':''}`;
+      const optsHtml = isMatch
+        ? `<div class="res-q__opts res-q__opts--letters">${q.opts.map((o,i)=>o?`<div class="${optState(i)}">(${letter(i)})${optTag(i)}</div>`:'').join('')}</div>`
+        : `<div class="res-q__opts">${q.opts.map((o,i)=>o?`<div class="${optState(i)}">(${letter(i)}) ${esc(o)} ${optTag(i)}</div>`:'').join('')}</div>`;
       return `<div class="res-q ${ok?'is-right':'is-wrong'}">
         <div class="res-q__h"><b>${q.no}. ${q.type==='listening'?'【听力】':(q.type==='matching'?'【匹配】':'【阅读】')}</b> <span>${ok?'✓ 正确':'✗ 错误'}</span></div>
         ${q.q?`<div class="res-q__stem">${esc(q.q)}</div>`:''}
         ${passage}
-        <div class="res-q__opts">${q.opts.map((o,i)=>o?`<div class="${i===q.answer?'is-ans':(i===chosen?'is-chosen':'')}">(${String.fromCharCode(65+i)}) ${esc(o)} ${i===q.answer?'（正确）':''}${i===chosen&&chosen!==q.answer?'（你的选择）':''}</div>`:'').join('')}</div>
+        ${optsHtml}
         <div class="res-q__why"><b>解析：</b>${esc(q.why)}</div>
       </div>`;
     }).join('');

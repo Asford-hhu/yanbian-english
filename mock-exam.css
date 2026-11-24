@@ -48,6 +48,12 @@
 .mock-passage { margin-bottom: var(--sp-4); border: 1px solid var(--border-glow); border-radius: var(--radius); background: var(--accent-wash); }
 .mock-passage summary { cursor: pointer; padding: 10px var(--sp-3); font-size: .82rem; color: var(--accent-ink); font-weight: 600; }
 .mock-passage > div { padding: 0 var(--sp-3) var(--sp-3); font-family: var(--font-body); font-size: .9rem; line-height: 1.85; color: var(--text-main); white-space: pre-wrap; }
+/* 长篇阅读匹配：段落全文只在折叠原文区出现一次；选项区仅保留段落字母 */
+.question__opts--letters { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 8px; }
+.opt--letter { justify-content: center; align-items: center; min-height: 46px; padding: 8px 6px; gap: 0; }
+.opt--letter::before { display: none; }
+.opt--letter .opt__key { color: var(--text-main); font-size: .95rem; }
+.opt--letter.is-selected .opt__key { color: var(--accent-ink); }
 /* 错题本里的原文区：与答案行留出间距，分段沿用 mock-passage 的 pre-wrap */
 .mistake-passage { margin-top: var(--sp-3); }
 
@@ -65,6 +71,7 @@
 .res-q__opts { font-size: .85rem; line-height: 1.9; color: var(--text-secondary); }
 .res-q__opts .is-ans { color: #16a34a; font-weight: 600; }
 .res-q__opts .is-chosen { color: #e11d48; }
+.res-q__opts--letters { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .res-q__why { margin-top: 8px; padding: 10px; border-radius: var(--radius); background: var(--accent-wash); font-size: .84rem; line-height: 1.8; color: var(--text-secondary); white-space: pre-wrap; }
 
 /* ===== 错题本：关键句高亮与逻辑解析 ===== */
