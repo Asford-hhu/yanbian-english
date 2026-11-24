@@ -515,12 +515,19 @@
     const readCount = all.length - listenCount;
     const tabs = `
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--sp-4)">
-        ${[['全部', all.length], ['听说错题', listenCount], ['阅读错题', readCount]].map(([k, n]) =>
+        ${[['全部', all.length], ['听说错题', listenCount], ['阅读错题', readCount], ['词汇错题', 0]].map(([k, n]) =>
           `<button class="filter-chip ${mistakeTab === k ? 'is-active' : ''}" data-mistaketab="${k}">${k} <span style="opacity:.7">${n}</span></button>`
         ).join('')}
       </div>`;
     const bindTabs = () => $$('[data-mistaketab]', root).forEach(b =>
       b.addEventListener('click', () => { mistakeTab = b.dataset.mistaketab; R.mistakes(); }));
+
+    // 词汇错题分区预留：暂不收集错题，只保留入口与空状态
+    if (mistakeTab === '词汇错题') {
+      root.innerHTML = tabs + `<div class="empty"><span class="empty__mark">✎</span><p>词汇错题功能即将开放，敬请期待。</p></div>`;
+      bindTabs();
+      return;
+    }
 
     if (!all.length) {
       root.innerHTML = tabs + `<div class="empty"><span class="empty__mark">✎</span><p>错题本还是空的。去做几道题，答错的会自动收进来。</p><div style="margin-top:var(--sp-4)"><button class="btn btn--primary" data-go="reading">去阅读练习</button></div></div>`;
