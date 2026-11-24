@@ -12,18 +12,23 @@
   let run = null;          // { items, idx, locked, chosen, correct, startedAt, wrong }
   let nextTimer = null;
 
-  /* 短释义：严格按规格，从完整长释义里取前两个中文义项 */
+  /* 短释义：先剥词性前缀，再从完整长释义里取前两个中文义项；同一义项不重复 */
   function shortGloss(v) {
+    const uniq = str => str.split('，').map(x => x.trim()).filter(Boolean)
+      .filter((x, i, a) => a.indexOf(x) === i).join('，');
     let s = String((v && v.meaning) || '').trim();
     if (!s) return '';
-    s = s.replace(/[。.；;]\s*$/, '');
-    if (s.length <= 12) return s;
-    s = s.split('；')[0];
+    s = s.replace(/[。.；;\s]+$/, '');
     s = s.replace(/^[A-Za-z]{1,6}\.\s*/, '');
-    let parts = s.split(/[,，]/).map(x => x.trim()).filter(Boolean);
+    /* 一个词条里常混着第二个词性（如「铝、a. 铝的」），只保留第一个义项组 */
+    s = s.split(/[,，、]\s*[A-Za-z]{1,6}\.\s*/)[0].replace(/[,，、\s]+$/, '');
+    if (!s) return '';
+    if (s.length <= 12) return uniq(s.replace(/[；;]/g, '，').replace(/[,，]\s*/g, '，'));
+    s = s.split('；')[0];
+    let parts = s.split(/[,，]/).map(x => x.trim()).filter(Boolean)
+      .filter((x, i, a) => a.indexOf(x) === i);
     if (!parts.length) return '';
-    parts = parts.slice(0, 2);
-    let out = parts.join('，');
+    let out = parts.slice(0, 2).join('，');
     if (out.length > 16) out = parts[0];
     return out.replace(/[。.]$/, '');
   }
@@ -283,14 +288,14 @@
         <div class="vq-score"><b>${pct}</b><span>%</span></div>
         <div class="vq-stats">${run.correct} / ${total} 题 · 用时 ${mmss}</div>
         <div class="vq-verdict">${esc(verdict)}</div>
-        ${wrong.length ? `<div class="vq-sub">本轮错词 · ${wrong.length} 个</div><div class="grid grid--2">${wrong.map(w => wrongCardHtml(w, false)).join('')}</div>` : ''}
         <div class="vq-actions">
           <button class="btn btn--primary" id="vq-again">再测一轮</button>
           ${wrong.length ? `<button class="btn btn--outline" id="vq-retry-wrong">只测这 ${wrong.length} 个错词</button>` : ''}
           <button class="btn btn--outline" id="vq-to-mistakes">去错题本</button>
           <button class="btn" id="vq-back2">返回记词</button>
         </div>
-        <div class="vq-tip">错词已加入错题本 · 词汇错题</div>
+        <div class="vq-tip">${wrong.length ? '错词已加入错题本 · 词汇错题' : '这一轮没有错词，错题本没有新增。'}</div>
+        ${wrong.length ? `<div class="vq-sub">本轮错词 · ${wrong.length} 个</div><div class="grid grid--2">${wrong.map(w => wrongCardHtml(w, false)).join('')}</div>` : ''}
       </div>`;
     bindSay(root);
     root.querySelector('#vq-again').addEventListener('click', () => open());
