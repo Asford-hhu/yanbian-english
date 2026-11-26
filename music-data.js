@@ -1,4 +1,136 @@
-// 砚边 · 英文经典曲库（公有领域 Public domain / CC0 曲目，本地自托管完整版）
-// 曲目为进入公有领域的经典英文歌曲，本地 mp3 播放，无需外链、无需切换线路。
-// 逐首来源与授权见 README 或 lyrics-data.js。数据整理于 2026-11-23，共 17 首。
-window.YANBIAN_MUSIC = [{"id":"amazing_grace","title":"Amazing Grace","artist":"John Newton / Southern Aire","cat":"经典","en":"Classic","file":"audio/music/amazing_grace.mp3?v=20261124a"},{"id":"auld_lang_syne","title":"Auld Lang Syne","artist":"Robert Burns / USAF Band","cat":"经典","en":"Classic","file":"audio/music/auld_lang_syne.mp3"},{"id":"sweetheart","title":"Let Me Call You Sweetheart","artist":"Whitson & Friedman","cat":"经典","en":"Classic","file":"audio/music/sweetheart.mp3?v=20261124a"},{"id":"battle_hymn","title":"Battle Hymn of the Republic","artist":"Julia Ward Howe","cat":"经典","en":"Classic","file":"audio/music/battle_hymn.mp3"},{"id":"john_brown","title":"John Brown's Body","artist":"Traditional","cat":"经典","en":"Classic","file":"audio/music/john_brown.mp3?v=20261124a"},{"id":"danny_boy","title":"Danny Boy","artist":"Traditional Irish / Schumann-Heink","cat":"民谣","en":"Folk","file":"audio/music/danny_boy.mp3"},{"id":"scarborough_fair","title":"Scarborough Fair","artist":"Traditional English","cat":"民谣","en":"Folk","file":"audio/music/scarborough_fair.mp3?v=20261124a"},{"id":"swing_low","title":"Swing Low, Sweet Chariot","artist":"Fisk Jubilee Singers","cat":"民谣","en":"Folk","file":"audio/music/swing_low.mp3?v=20261124a"},{"id":"oh_susanna","title":"Oh! Susanna","artist":"Stephen Foster","cat":"民谣","en":"Folk","file":"audio/music/oh_susanna.mp3"},{"id":"old_folks","title":"Old Folks at Home","artist":"Stephen Foster / Schumann-Heink","cat":"民谣","en":"Folk","file":"audio/music/old_folks.mp3"},{"id":"camptown_races","title":"Camptown Races","artist":"Stephen Foster / H. C. Browne","cat":"民谣","en":"Folk","file":"audio/music/camptown_races.mp3?v=20261124a"},{"id":"yankee_doodle","title":"Yankee Doodle","artist":"Traditional / Choral","cat":"民谣","en":"Folk","file":"audio/music/yankee_doodle.mp3?v=20261124a"},{"id":"silent_night","title":"Silent Night","artist":"Traditional / Singing Sergeants","cat":"圣诞","en":"Carol","file":"audio/music/silent_night.mp3?v=20261124a"},{"id":"jingle_bells","title":"Jingle Bells","artist":"J. L. Pierpont / USAF Band","cat":"圣诞","en":"Carol","file":"audio/music/jingle_bells.mp3"},{"id":"merry_christmas","title":"We Wish You a Merry Christmas","artist":"Traditional / USAF Band","cat":"圣诞","en":"Carol","file":"audio/music/merry_christmas.mp3"},{"id":"joy_to_world","title":"Joy to the World","artist":"Isaac Watts / USAF Band","cat":"圣诞","en":"Carol","file":"audio/music/joy_to_world.mp3"},{"id":"twinkle","title":"Twinkle, Twinkle, Little Star","artist":"Traditional","cat":"儿歌","en":"Nursery","file":"audio/music/twinkle.mp3?v=20261124a"}];
+// 砚边 · 精选英文歌曲（CC BY 4.0 / Public Domain），本地自托管
+// 逐首授权与来源见页面底部「署名与授权」；数据整理于 2026-11-26。
+window.YANBIAN_MUSIC = [
+ {
+  "id": "amazing_grace",
+  "title": "Amazing Grace",
+  "artist": "John Newton / Southern Aire",
+  "cat": "经典",
+  "en": "Classic",
+  "file": "audio/music/amazing_grace.mp3?v=20261124a",
+  "license": "Public Domain",
+  "source": "传统圣歌 · 公有领域",
+  "sourceUrl": "",
+  "licenseUrl": ""
+ },
+ {
+  "id": "all_the_same",
+  "title": "All The Same",
+  "artist": "Atch",
+  "cat": "流行",
+  "en": "Pop",
+  "file": "audio/music/all_the_same.mp3?v=20261126b",
+  "license": "CC BY 4.0",
+  "source": "Free Music Archive",
+  "sourceUrl": "https://freemusicarchive.org/music/atch/single/all-the-same-6",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+ },
+ {
+  "id": "read_your_mind",
+  "title": "Read Your Mind (ft. Jason Walker)",
+  "artist": "Atch feat. Jason Walker",
+  "cat": "流行",
+  "en": "Pop",
+  "file": "audio/music/read_your_mind.mp3?v=20261126b",
+  "license": "CC BY 4.0",
+  "source": "Free Music Archive",
+  "sourceUrl": "https://freemusicarchive.org/music/atch/single/atch-read-your-mind-ft-jason-walker/",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+ },
+ {
+  "id": "go",
+  "title": "Go",
+  "artist": "Josh Woodward",
+  "cat": "流行",
+  "en": "Pop",
+  "file": "audio/music/go.mp3?v=20261126b",
+  "license": "CC BY 4.0",
+  "source": "Josh Woodward 官网",
+  "sourceUrl": "https://www.joshwoodward.com/song/Go",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+ },
+ {
+  "id": "the_worst_part",
+  "title": "The Worst Part",
+  "artist": "Josh Woodward",
+  "cat": "流行",
+  "en": "Pop",
+  "file": "audio/music/the_worst_part.mp3?v=20261126b",
+  "license": "CC BY 4.0",
+  "source": "Josh Woodward 官网",
+  "sourceUrl": "https://www.joshwoodward.com/song/TheWorstPart",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+ },
+ {
+  "id": "the_grand_finale",
+  "title": "The Grand Finale",
+  "artist": "Josh Woodward",
+  "cat": "流行",
+  "en": "Pop",
+  "file": "audio/music/the_grand_finale.mp3?v=20261126b",
+  "license": "CC BY 4.0",
+  "source": "Josh Woodward 官网",
+  "sourceUrl": "https://www.joshwoodward.com/song/TheGrandFinale",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+ },
+ {
+  "id": "shade",
+  "title": "Shade",
+  "artist": "Josh Woodward",
+  "cat": "流行",
+  "en": "Pop",
+  "file": "audio/music/shade.mp3?v=20261126b",
+  "license": "CC BY 4.0",
+  "source": "Josh Woodward 官网",
+  "sourceUrl": "https://www.joshwoodward.com/song/Shade",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+ },
+ {
+  "id": "rebound",
+  "title": "Rebound",
+  "artist": "Josh Woodward",
+  "cat": "流行",
+  "en": "Pop",
+  "file": "audio/music/rebound.mp3?v=20261126b",
+  "license": "CC BY 4.0",
+  "source": "Josh Woodward 官网",
+  "sourceUrl": "https://www.joshwoodward.com/song/Rebound",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+ },
+ {
+  "id": "synthia",
+  "title": "Synthia",
+  "artist": "Josh Woodward",
+  "cat": "流行",
+  "en": "Pop",
+  "file": "audio/music/synthia.mp3?v=20261126b",
+  "license": "CC BY 4.0",
+  "source": "Josh Woodward 官网",
+  "sourceUrl": "https://www.joshwoodward.com/song/Synthia",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+ },
+ {
+  "id": "let_it_in",
+  "title": "Let It In",
+  "artist": "Josh Woodward",
+  "cat": "流行",
+  "en": "Pop",
+  "file": "audio/music/let_it_in.mp3?v=20261126b",
+  "license": "CC BY 4.0",
+  "source": "Josh Woodward 官网",
+  "sourceUrl": "https://www.joshwoodward.com/song/LetItIn",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+ },
+ {
+  "id": "i_gotto_to_be_me",
+  "title": "I Gotto To Be Me",
+  "artist": "Rewob feat. Skye Jordan",
+  "cat": "流行",
+  "en": "Pop",
+  "file": "audio/music/i_gotto_to_be_me.mp3?v=20261126b",
+  "license": "CC BY 4.0",
+  "source": "ccMixter",
+  "sourceUrl": "https://ccmixter.org/files/rewob/70105",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+ }
+];

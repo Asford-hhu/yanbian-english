@@ -504,8 +504,12 @@ body { color: var(--text-main); }
 .daily-note { padding: var(--sp-3) var(--sp-4) !important; text-align: center; }
 .daily-note .card__label { font-size: .62rem; letter-spacing: .14em; }
 .daily-note__en {
-  font-family: var(--font-serif); font-size: .92rem; line-height: 1.55;
+  /* theme.css 把 --font-serif 覆盖成无衬线体，合成斜体观感很弱；
+     这里单独指定有真正 italic 字形的系统衬线栈（零外部依赖，桌面/手机通用） */
+  font-family: Georgia, "Times New Roman", "Songti SC", "Noto Serif SC", serif;
+  font-size: .92rem; line-height: 1.55;
   margin: 4px 0 2px; color: var(--ink); font-style: italic;
+  font-synthesis: style;
 }
 .daily-note__zh {
   font-family: var(--font-serif); font-size: .74rem; line-height: 1.45;
@@ -593,6 +597,20 @@ body { color: var(--text-main); }
 .vocab-line .vdot { fill: var(--accent); stroke: var(--paper); stroke-width: 2; }
 .vocab-line .vdot.is-today { fill: var(--pine); }
 .vocab-line .vlabel { fill: var(--ink-faint); font-family: var(--font-display); font-size: 11px; text-anchor: middle; }
+
+/* 桌面端 SVG 被容器横向拉伸约 1.7 倍，圆点/星期字会显得过扁；
+   反向横向缩放做补偿，让图标恢复接近正圆、文字恢复正常字宽（手机端宽度接近 viewBox，不引入）。 */
+@media (min-width: 721px) {
+  /* 卡片拉高：SVG 170→250px，纵向被拉伸约 1.47 倍；额外 scaleY(.7) 抵消，
+     圆点/星期字保持正常比例（横向仍靠 scaleX(.6) 抵消 1.71 倍横向拉伸）。 */
+  .vocab-line { height: 250px; }
+  .vocab-line .vdot,
+  .vocab-line .vlabel {
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scaleX(.6) scaleY(.7);
+  }
+}
 
 .cal-head { display: flex; align-items: center; gap: 12px; margin-bottom: var(--sp-4); flex-wrap: wrap; }
 .cal-title { font-family: var(--font-display); font-size: 1.1rem; min-width: 116px; text-align: center; color: var(--ink); }

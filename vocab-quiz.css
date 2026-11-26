@@ -161,3 +161,83 @@
   #view-vocab .vq-actions .btn { flex: 1 1 auto; min-height: 44px; }
   #view-mistakes .vq-mist-head { flex-direction: column; align-items: flex-start; }
 }
+
+/* ===== 随机小测 v2 · 选择页 / 记录页（追加，不动上面任何规则） ===== */
+#view-vocab .vq-hub { padding-top: var(--sp-2); }
+#view-vocab .vq-hub__title {
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 700;
+  color: var(--ink); margin-top: var(--sp-2);
+}
+#view-vocab .vq-hub__sub {
+  font-family: var(--font-serif); font-size: .9rem; color: var(--ink-faint);
+  margin-top: var(--sp-1); margin-bottom: var(--sp-5);
+}
+#view-vocab .vq-cats {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+#view-vocab .vq-cat {
+  padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-2);
+}
+#view-vocab .vq-cat__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+#view-vocab .vq-cat__count { font-family: var(--font-serif); font-size: .84rem; color: var(--ink-faint); }
+#view-vocab .vq-cat__name {
+  font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: var(--ink);
+  margin-top: var(--sp-1);
+}
+#view-vocab .vq-cat__stat { font-family: var(--font-serif); font-size: .86rem; color: var(--ink-soft); }
+#view-vocab .vq-cat__btn { margin-top: auto; align-self: flex-start; }
+#view-vocab .vq-report {
+  display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
+  padding: var(--sp-4) var(--sp-5); margin-top: var(--sp-5);
+  border: 1px solid var(--rule); border-radius: var(--radius); background: var(--bg-card);
+  cursor: pointer; transition: border-color .18s ease;
+}
+#view-vocab .vq-report:hover { border-color: var(--accent); }
+#view-vocab .vq-report__label { font-family: var(--font-display); font-weight: 700; color: var(--ink); }
+#view-vocab .vq-report__mid { font-family: var(--font-serif); font-size: .9rem; color: var(--ink-soft); margin-left: auto; }
+#view-vocab .vq-report__go { font-family: var(--font-serif); font-size: .9rem; color: var(--accent-ink); white-space: nowrap; }
+#view-vocab .vq-note {
+  font-family: var(--font-serif); font-size: .82rem; color: var(--ink-faint);
+  margin-top: var(--sp-4);
+}
+#view-vocab .vq-link {
+  border: 0; background: none; padding: 0; cursor: pointer;
+  font-family: var(--font-serif); font-size: .85rem; color: var(--accent-ink);
+}
+#view-vocab .vq-link:hover { text-decoration: underline; }
+#view-vocab .vq-link--danger { color: var(--danger); }
+
+/* 记录页 */
+#view-vocab .vq-hist { padding-top: var(--sp-2); }
+#view-vocab .vq-hist .stat-strip { margin-bottom: var(--sp-5); }
+#view-vocab .vq-hist .filter-bar { margin-bottom: var(--sp-4); }
+#view-vocab .vq-log__row {
+  display: grid; grid-template-columns: auto auto 1fr auto auto;
+  gap: var(--sp-3); align-items: center;
+  padding: var(--sp-3) 0; border-bottom: 1px solid var(--rule);
+  font-family: var(--font-serif); font-size: .9rem; color: var(--ink-soft);
+}
+#view-vocab .vq-log__time { color: var(--ink); white-space: nowrap; }
+#view-vocab .vq-log__score { justify-self: end; }
+#view-vocab .vq-log__pct { justify-self: end; min-width: 3.2em; text-align: right; }
+#view-vocab .vq-log__pct.is-good { color: var(--success); font-weight: 600; }
+#view-vocab .vq-log__pct.is-low { color: var(--danger); font-weight: 600; }
+#view-vocab .vq-log__dur { justify-self: end; color: var(--ink-faint); white-space: nowrap; }
+#view-vocab .vq-log__more, #view-vocab .vq-log__foot { text-align: center; margin-top: var(--sp-4); }
+
+@media (max-width: 980px) {
+  #view-vocab .vq-cats { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  #view-vocab .vq-report__mid { margin-left: 0; }
+  #view-vocab .vq-log__row {
+    grid-template-columns: 1fr auto;
+    gap: var(--sp-1) var(--sp-2);
+  }
+  #view-vocab .vq-log__time { grid-column: 1; }
+  #view-vocab .vq-log__row .tag { grid-column: 2; justify-self: end; }
+  #view-vocab .vq-log__score { grid-column: 1; justify-self: start; }
+  #view-vocab .vq-log__pct { grid-column: 2; }
+  #view-vocab .vq-log__dur { grid-column: 1 / -1; justify-self: start; color: var(--ink-faint); }
+}

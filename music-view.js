@@ -149,6 +149,27 @@
         </audio>
       </div>`;
 
+    // 页面底部可折叠署名区：CC BY 与 Public Domain 分开列
+    const creditsHtml = () => {
+      const cc = MUSIC.filter(m => m.license === 'CC BY 4.0');
+      const pd = MUSIC.filter(m => m.license !== 'CC BY 4.0');
+      const ccItems = cc.map(m =>
+        `<li>${esc(m.title)} — ${esc(m.artist)}，来源：<a href="${esc(m.sourceUrl)}" target="_blank" rel="noopener">${esc(m.source)}</a>，协议 <a href="${esc(m.licenseUrl)}" target="_blank" rel="noopener">CC BY 4.0</a></li>`
+      ).join('');
+      const pdItems = pd.map(m =>
+        `<li>${esc(m.title)} — ${esc(m.artist)}，Public Domain（公有领域）</li>`
+      ).join('');
+      return `<details class="music-credits" style="margin-top:var(--sp-5);border-top:1px solid var(--line);padding-top:12px">
+        <summary style="cursor:pointer;color:var(--ink-soft);font-size:.86rem">署名与授权</summary>
+        <div style="margin-top:10px;color:var(--ink-soft);font-size:.82rem;line-height:1.9">
+          <div style="font-weight:600;margin-top:8px">CC BY 4.0 曲目</div>
+          <ul style="margin:4px 0 12px;padding-left:20px">${ccItems}</ul>
+          <div style="font-weight:600;margin-top:8px">Public Domain（公有领域）</div>
+          <ul style="margin:4px 0;padding-left:20px">${pdItems}</ul>
+        </div>
+      </details>`;
+    };
+
     const cardHtml = (m) => {
       const playing = current && String(current.id) === String(m.id);
       return `<div class="music-card ${playing ? 'is-playing' : ''}">
@@ -176,9 +197,9 @@
         : `<div class="empty"><span class="empty__mark">∅</span><p>没有找到匹配的歌曲，换个关键词试试。</p></div>`;
       root.innerHTML = `
         <div class="card" style="border-left:3px solid var(--accent);margin-bottom:var(--sp-5)">
-          <div class="card__label">English Music · 英文磨耳朵</div>
+          <div class="card__label">精选英文歌曲 · English Music</div>
           <p style="font-family:var(--font-serif);margin:0;color:var(--ink-soft);line-height:1.8">
-            听歌是最不费力的语感训练。共 <b>${MUSIC.length}</b> 首公有领域经典英文歌，按风格分类，均为<b>完整版原曲、本地播放</b>，不连外链、无需切换线路。点「▶ 播放」就在这首歌的卡片里收听，点「歌词」对照中英歌词跟唱，歌词会随播放进度自动高亮。
+            听歌是最不费力的语感训练。共 <b>${MUSIC.length}</b> 首精选英文歌曲，按风格分类，本地播放。点「▶ 播放」就在这首歌的卡片里收听，点「歌词」对照中英歌词跟唱，歌词会随播放进度自动高亮。授权与署名见页面底部。
           </p>
         </div>
         <div class="filter-bar">${chips}</div>
@@ -187,6 +208,7 @@
           <span class="vocab-count">找到 ${items.length} 首</span>
         </div>
         <div class="music-grid">${cards}</div>
+        ${creditsHtml()}
       `;
       window.__MUSIC_CURRENT__ = current;
       $$('[data-mcat]', root).forEach(b => b.addEventListener('click', () => { cat = b.dataset.mcat; query = ''; render(); }));

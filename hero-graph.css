@@ -1,0 +1,196 @@
+/* 首屏目录卡 · 图谱态（three.js 神经传导词关系图）
+   只在 ≥1080px 由 hero-deck 挂载；命名空间 wg-*，不碰任何既有规则。 */
+
+/* 图谱卡直接继承原本 .vd-index 的边框位置与大小，不另设尺寸 */
+.vd-index [hidden] { display: none !important; }
+
+/* 卡头分段开关 */
+.wg-tabs {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 2px;
+  padding: 3px; border-radius: 999px;
+  background: rgba(255, 255, 255, .07);
+}
+.wg-tab {
+  border: 0; border-radius: 999px; padding: 4px 11px; cursor: pointer;
+  font: inherit; font-size: .62rem; letter-spacing: .04em;
+  color: rgba(255, 255, 255, .5); background: transparent; transition: .2s;
+}
+.wg-tab:hover { color: rgba(255, 255, 255, .82); }
+.wg-tab.is-on { background: rgba(255, 255, 255, .16); color: #fff; }
+.wg-tab:focus-visible { outline: 2px solid var(--vd-gold, #F4BA3B); outline-offset: 2px; }
+
+/* 目录态：包住原 .vd-index__grid 与 .vd-index__peek 的容器 */
+.wg-list { display: block; }
+
+/* 3D 画布：深蓝黑虚空，外圈渐隐，无边框（卡片描边已够） */
+.wg-stage {
+  position: relative;
+  height: 160px;
+  margin: 0 -6px 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(80% 80% at 48% 46%, rgba(30, 104, 132, .24) 0%, rgba(5, 9, 18, 0) 70%),
+    radial-gradient(120% 120% at 50% 50%, rgba(4, 8, 16, 0) 42%, rgba(2, 4, 10, .82) 100%);
+}
+.wg-stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.wg-stage::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(132% 104% at 50% 50%, transparent 46%, rgba(2, 4, 10, .6) 100%);
+}
+.wg-loading {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font: inherit; font-size: .74rem; letter-spacing: .12em;
+  color: rgba(255, 255, 255, .66);
+}
+.wg-loading::before {
+  content: ""; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .18);
+  border-top-color: var(--vd-gold, #F4BA3B);
+  animation: wg-spin .9s linear infinite;
+}
+@keyframes wg-spin { to { transform: rotate(360deg); } }
+.wg-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 24px; text-align: center;
+  font: inherit; font-size: .78rem; line-height: 1.6;
+  color: rgba(255, 255, 255, .62);
+}
+.wg-empty[hidden] { display: none !important; }
+.wg-empty b { color: #fff; font-size: .84rem; font-weight: 600; }
+
+/* 图例 + 换一个 */
+.wg-tools {
+  display: flex; align-items: center; gap: 14px;
+  padding: 7px 3px 0;
+  font-size: .6rem; color: rgba(255, 255, 255, .5);
+}
+.wg-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.wg-key i { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+.wg-spacer { margin-left: auto; }
+.wg-btn {
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(255, 255, 255, .05);
+  color: rgba(255, 255, 255, .8);
+  border-radius: 999px; padding: 4px 10px;
+  font: inherit; font-size: .62rem; cursor: pointer; transition: .18s;
+  white-space: nowrap;
+}
+.wg-btn:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+.wg-btn:focus-visible { outline: 2px solid var(--vd-gold, #F4BA3B); outline-offset: 2px; }
+
+/* 详情条 */
+.wg-detail {
+  padding: 6px 3px 0;
+  border-top: 1px solid rgba(255, 255, 255, .10);
+  margin-top: 7px;
+}
+.wg-detail__row { display: flex; align-items: baseline; gap: 7px; }
+.wg-detail__w { font-size: .88rem; font-weight: 700; color: #fff; letter-spacing: .01em; }
+.wg-detail__p { font-size: .62rem; color: rgba(255, 255, 255, .45); }
+.wg-detail__n { margin-left: auto; font-size: .62rem; color: var(--vd-gold, #F4BA3B); white-space: nowrap; }
+.wg-detail__m {
+  margin-top: 3px; font-size: .68rem; line-height: 1.45;
+  color: rgba(255, 255, 255, .64);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* 画布高度（卡片尺寸完全跟随原有 .vd-index 规则） */
+@media (min-width: 1080px) and (max-width: 1279px) {
+  .wg-stage { height: 160px; }
+}
+
+/* <1080px 不显示图谱开关；hero-deck.js 也不会挂载 three。
+   目录卡保持原有 424px / 12 项 / peek 的观感。 */
+@media (max-width: 1079px) {
+  .wg-tabs { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wg-loading::before { animation: none; }
+  .wg-tab, .wg-btn { transition: none; }
+}
+
+/* ------------------------------------------------------------------ 全屏导图浮层
+   只搬 stage 这一个 DOM 进浮层，WebGL 上下文全程不重建。 */
+.wg-expand {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  padding: 4px 10px; border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 999px; background: rgba(10, 8, 22, .42);
+  color: rgba(255, 255, 255, .78); font: inherit; font-size: .68rem;
+  letter-spacing: .04em; cursor: pointer; opacity: .62;
+  transition: opacity .18s, background .18s, border-color .18s;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.wg-expand:hover, .wg-expand:focus-visible {
+  opacity: 1; background: rgba(20, 16, 38, .72); border-color: rgba(244, 186, 59, .55);
+}
+.wg-expand:focus-visible { outline: 2px solid var(--vd-gold, #F4BA3B); outline-offset: 2px; }
+
+.wg-fs { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; }
+.wg-fs[hidden] { display: none !important; }
+.wg-fs__veil {
+  position: absolute; inset: 0;
+  background: radial-gradient(130% 100% at 50% 42%, rgba(8, 11, 22, .50) 0%, rgba(4, 6, 14, .74) 68%, rgba(2, 3, 9, .88) 100%);
+  -webkit-backdrop-filter: blur(26px) saturate(.72); backdrop-filter: blur(26px) saturate(.72);
+  opacity: 0; transition: opacity .22s ease;
+}
+.wg-fs__veil::after { content: none; }
+.wg-fs.is-open .wg-fs__veil { opacity: 1; }
+.wg-fs__inner {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  opacity: 0; transform: scale(.84); transform-origin: center center;
+  /* 关闭：稍快收拢 */
+  transition: opacity .22s ease, transform .24s cubic-bezier(.4,0,.7,.4);
+}
+.wg-fs.is-open .wg-fs__inner {
+  opacity: 1; transform: scale(1);
+  /* 打开：明显放大回弹，速度适中 */
+  transition: opacity .34s ease, transform .4s cubic-bezier(.16,1,.3,1);
+}
+.wg-fs__stage {
+  width: min(92vw, 1320px); height: min(70vh, 700px); max-height: calc(100vh - 210px);
+  border-radius: 24px; overflow: hidden;
+}
+/* 关键：搬进来的 .wg-stage 自带 160px 高度，浮层内必须撑满父容器；
+   底色与暗角全部透明，导图像直接浮在虚化背景上，没有矩形分界 */
+.wg-fs__stage > .wg-stage {
+  height: 100% !important; margin: 0; border-radius: 0;
+  background: none;
+}
+.wg-fs__stage > .wg-stage::after { content: none; }
+.wg-fs__stage .wg-expand { display: none !important; }
+.wg-fs__note {
+  margin-top: 18px; padding: 12px 24px; border-radius: 999px;
+  background: rgba(12, 10, 26, .46);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  min-width: 340px; text-align: center;
+}
+.wg-fs__note .wg-detail { padding: 0; border: 0; margin: 0; }
+.wg-fs__note .wg-detail__row { justify-content: center; }
+.wg-fs__note .wg-detail__w { font-size: 22px; }
+.wg-fs__note .wg-detail__p { font-size: 13px; opacity: .6; }
+.wg-fs__note .wg-detail__m { font-size: 15px; margin-top: 4px; -webkit-line-clamp: 2; text-align: center; }
+.wg-fs__note .wg-detail__n { font-size: 12px; }
+.wg-fs__close {
+  position: absolute; top: 26px; right: 30px; z-index: 3;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .18); background: rgba(12, 10, 26, .52);
+  color: #fff; font-size: 12px; cursor: pointer;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  transition: background .18s, border-color .18s;
+}
+.wg-fs__close:hover, .wg-fs__close:focus-visible { background: rgba(28, 22, 48, .82); border-color: rgba(244, 186, 59, .55); outline: none; }
+.wg-fs__close span {
+  position: absolute; top: 44px; right: 0; font-size: 9px; letter-spacing: .08em;
+  color: rgba(255, 255, 255, .48);
+}
+body.wg-fs-open { overflow: hidden; }
+body.wg-fs-open .wg-tools, body.wg-fs-open .wg-expand { visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wg-fs__veil, .wg-fs__inner { transition: none; }
+}

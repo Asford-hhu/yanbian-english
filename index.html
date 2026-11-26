@@ -46,13 +46,22 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=DM+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="styles.css?v=20261125a">
 <link rel="stylesheet" href="theme.css?v=20261125b">
-<link rel="stylesheet" href="tuned.css?v=20261123o">
+<link rel="stylesheet" href="tuned.css?v=20261125r">
 <link rel="stylesheet" href="news.css?v=20261126b">
 <link rel="stylesheet" href="mock-exam.css?v=20261124h">
-<link rel="stylesheet" href="vocab-quiz.css?v=20261124r">
+<link rel="stylesheet" href="vocab-quiz.css?v=20261125v2a">
 <link rel="stylesheet" href="picker.css?v=20261127b">
 <link rel="stylesheet" href="overlay.css?v=20261123g">
 <link rel="stylesheet" href="perf.css?v=20261124g">
+<!-- 桌面端首屏：仅 ≥721px 注入资源；手机端零请求、零 DOM、零布局影响 -->
+<script>
+(function(){
+  if (!window.matchMedia || !window.matchMedia('(min-width:721px)').matches) return;
+  document.write('<link rel="stylesheet" href="hero-deck.css?v=20261126d">');
+  document.write('<link rel="stylesheet" href="hero-graph.css?v=20261126d">');
+  document.write('<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}<\/script>');
+})();
+</script>
 </head>
 <body>
 
@@ -228,17 +237,24 @@
 <script src="listening-extra.js?v=20261125a" defer></script>
 <script src="listening-extra2.js?v=20261128b" defer></script>
 <script src="listen-audio.js?v=20261128b" defer></script>
-<script src="music-data.js?v=20261124a" defer></script>
-<script src="lyrics-data.js?v=20261123a" defer></script>
+<script src="music-data.js?v=20261126b" defer></script>
+<script src="lyrics-data.js?v=20261126c" defer></script>
 <script src="news-data.js?v=20261126b" defer></script>
 <script src="mock-exam-data.js?v=20261124n" defer></script>
 <script src="keypoints-data.js?v=20261124i" defer></script>
 <script src="reading-keypoints.js?v=20261122n" defer></script>
 <script src="app2.js?v=20261124p" defer></script>
-<script src="vocab-quiz.js?v=20261124m" defer></script>
-<script src="music-view.js?v=20261123d" defer></script>
+<script src="vocab-quiz.js?v=20261125v2b" defer></script>
+<script src="music-view.js?v=20261126b" defer></script>
 <script src="news-view.js?v=20261126b" defer></script>
 <script src="mock-exam-view.js?v=20261124h" defer></script>
 <script src="picker.js?v=20261127b" defer></script>
+<!-- 桌面端首屏脚本：仅 ≥721px 注入，defer 顺序与其他脚本一致 -->
+<script>
+(function(){
+  if (!window.matchMedia || !window.matchMedia('(min-width:721px)').matches) return;
+  document.write('<script src="hero-deck.js?v=20261126d" defer><\/script>');
+})();
+</script>
 </body>
 </html>
