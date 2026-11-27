@@ -1,4 +1,4 @@
-﻿name: daily-intel
+name: daily-intel
 
 on:
   schedule:
