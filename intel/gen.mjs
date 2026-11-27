@@ -1,5 +1,6 @@
 // 每日错题情报生成器（GitHub Actions 里跑）
-// 依赖：Node 20+（自带 fetch），环境变量 QODER_PAT / QODER_AGENT_ID / QODER_ENVIRONMENT_ID
+// 只需要一个 Secret：QODER_PAT（Qoder 控制台 → 设置 → 个人访问令牌，pt- 开头）
+// QODER_AGENT_ID / QODER_ENVIRONMENT_ID 可选；不填就自动去账户里找一个
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,8 +25,68 @@ const SYSTEM_PROMPT = `你是「砚边」英语备考站的每日值班教练，
 7. 语气像教练：短句、具体、不客套。`;
 
 const day = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' }); // YYYY-MM-DD
-
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const TOKEN = process.env.QODER_PAT || process.env.QODER_ACCESS_TOKEN || '';
+const auth = {
+  Authorization: 'Bearer ' + TOKEN,
+  'Content-Type': 'application/json',
+  Accept: 'application/json'
+};
+
+async function api(p, init = {}) {
+  const res = await fetch(API + p, {
+    ...init,
+    headers: { ...auth, ...(init.headers || {}) },
+    signal: AbortSignal.timeout(15000)
+  });
+  const text = await res.text();
+  let json = null;
+  try { json = JSON.parse(text); } catch {}
+  return { ok: res.ok, status: res.status, json, text };
+}
+
+function pickArray(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  for (const k of ['data', 'items', 'results', 'agents', 'environments', 'list']) {
+    if (Array.isArray(payload[k])) return payload[k];
+  }
+  return [];
+}
+
+async function discover() {
+  let agentId = (process.env.QODER_AGENT_ID || '').trim();
+  let envId = (process.env.QODER_ENVIRONMENT_ID || '').trim();
+
+  if (!agentId) {
+    const r = await api('/api/v1/cloud/agents?limit=50');
+    const list = pickArray(r.json);
+    console.log('[discover] agents', r.status, list.length);
+    if (list.length) {
+      const want = list.find(a => /砚边|yanbian|intel|brief|英语/i.test(String(a.name || a.title || '')));
+      agentId = String((want || list[0]).id || '');
+      console.log('[discover] agent =', agentId, (want || list[0]).name || '');
+    } else {
+      console.log('[discover] 账户里还没有 Agent：先到 Qoder 控制台 → 智能体/Cloud Agents 建一个，或填 QODER_AGENT_ID');
+    }
+  }
+
+  if (!envId) {
+    const r = await api('/api/v1/cloud/environments?limit=50');
+    const list = pickArray(r.json);
+    console.log('[discover] environments', r.status, list.length);
+    if (list.length) {
+      const pick = list.find(e => e.is_default || e.default) || list[0];
+      envId = String(pick.id || '');
+      console.log('[discover] environment =', envId, pick.name || '');
+    } else {
+      console.log('[discover] 没有可用环境：到控制台建一个默认环境，或填 QODER_ENVIRONMENT_ID');
+    }
+  }
+
+  return { agentId, envId };
+}
 
 function extractJson(text) {
   const clean = String(text || '').replace(/```(?:json)?/gi, '').trim();
@@ -47,34 +108,28 @@ function valid(out) {
   return { line: out.line.trim().slice(0, 30), summary, steps };
 }
 
-async function runAgent(payload) {
-  const token = process.env.QODER_PAT;
-  const agentId = process.env.QODER_AGENT_ID;
-  const envId = process.env.QODER_ENVIRONMENT_ID;
-  if (!token || !agentId || !envId) {
-    console.log('[skip] 缺少 QODER_PAT / QODER_AGENT_ID / QODER_ENVIRONMENT_ID');
-    return null;
-  }
-  const auth = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Accept: 'application/json' };
+async function runAgent(agentId, envId) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   let sid = '';
   try {
-    const created = await fetch(API + '/api/v1/cloud/sessions', {
-      method: 'POST', headers: auth, signal: ctrl.signal,
+    const created = await api('/api/v1/cloud/sessions', {
+      method: 'POST',
+      signal: ctrl.signal,
       body: JSON.stringify({
         agent: { type: 'agent', id: agentId },
         environment_id: envId,
         title: '砚边每日情报 ' + day,
-        metadata: { kind: 'yanbian_intel_daily', day, temperature: 0.6, max_tokens: 900 }
+        metadata: { kind: 'yanbian_intel_daily', day }
       })
     });
-    if (!created.ok) { console.log('[agent] create failed', created.status); return null; }
-    sid = String((await created.json()).id || '');
-    if (!/^sess_[A-Za-z0-9_-]+$/.test(sid)) { console.log('[agent] bad session id'); return null; }
+    if (!created.ok) { console.log('[agent] create failed', created.status, created.text.slice(0, 200)); return null; }
+    sid = String(created.json?.id || '');
+    if (!/^sess_[A-Za-z0-9_-]+$/.test(sid)) { console.log('[agent] bad session id', sid); return null; }
 
-    const sent = await fetch(`${API}/api/v1/cloud/sessions/${sid}/events`, {
-      method: 'POST', headers: auth, signal: ctrl.signal,
+    const sent = await api(`/api/v1/cloud/sessions/${sid}/events`, {
+      method: 'POST',
+      signal: ctrl.signal,
       body: JSON.stringify({
         events: [
           { type: 'system.message', content: [{ type: 'text', text: SYSTEM_PROMPT }] },
@@ -82,14 +137,13 @@ async function runAgent(payload) {
         ]
       })
     });
-    if (!sent.ok) { console.log('[agent] send failed', sent.status); return null; }
+    if (!sent.ok) { console.log('[agent] send failed', sent.status, sent.text.slice(0, 200)); return null; }
 
-    const deadline = Date.now() + TIMEOUT_MS - 2000;
+    const deadline = Date.now() + TIMEOUT_MS - 3000;
     while (Date.now() < deadline) {
-      const listed = await fetch(`${API}/api/v1/cloud/sessions/${sid}/events?order=asc&limit=100`, { headers: auth, signal: ctrl.signal });
+      const listed = await api(`/api/v1/cloud/sessions/${sid}/events?order=asc&limit=100`, { signal: ctrl.signal });
       if (!listed.ok) { console.log('[agent] list failed', listed.status); return null; }
-      const page = await listed.json();
-      const msgs = (Array.isArray(page.data) ? page.data : []).filter(e => e && e.type === 'agent.message');
+      const msgs = pickArray(listed.json).filter(e => e && e.type === 'agent.message');
       for (let i = msgs.length - 1; i >= 0; i--) {
         const text = (msgs[i].content || []).map(c => c?.text || '').join('');
         const out = valid(extractJson(text));
@@ -120,14 +174,25 @@ function readIndex() {
 
 (async () => {
   fs.mkdirSync(OUT_DIR, { recursive: true });
-  const out = await runAgent({ day });
 
+  if (!TOKEN) {
+    console.log('[skip] 没有 QODER_PAT：到 https://qoder.com 设置 → 个人访问令牌 建一个，再加到仓库 Secret');
+    process.exit(0);
+  }
+
+  const { agentId, envId } = await discover();
+  if (!agentId || !envId) {
+    console.log('[skip] 缺少 Agent 或 Environment，见上面日志');
+    process.exit(0);
+  }
+
+  const out = await runAgent(agentId, envId);
   if (!out) {
     console.log('[done] 本次没有生成新内容，保留旧文件');
     process.exit(0);
   }
 
-  const payload = { day, ...out, source: 'agent', updatedAt: new Date().toISOString() };
+  const payload = { day, ...out, source: 'agent', agentId, updatedAt: new Date().toISOString() };
   fs.writeFileSync(path.join(OUT_DIR, 'latest.json'), JSON.stringify(payload, null, 2) + '\n', 'utf8');
   fs.writeFileSync(path.join(OUT_DIR, `${day}.json`), JSON.stringify(payload, null, 2) + '\n', 'utf8');
 
