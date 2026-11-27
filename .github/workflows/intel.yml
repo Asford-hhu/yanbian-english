@@ -1,0 +1,44 @@
+name: daily-intel
+
+on:
+  schedule:
+    # 每天 23:00 UTC = 次日 07:00 北京时间
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-intel
+  cancel-in-progress: false
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate today's intel
+        env:
+          QODER_PAT: ${{ secrets.QODER_PAT }}
+          QODER_AGENT_ID: ${{ secrets.QODER_AGENT_ID }}
+          QODER_ENVIRONMENT_ID: ${{ secrets.QODER_ENVIRONMENT_ID }}
+        run: node intel/gen.mjs
+
+      - name: Commit if changed
+        run: |
+          git config user.name  'yanbian-intel-bot'
+          git config user.email 'intel-bot@users.noreply.github.com'
+          if [ -z "$(git status --porcelain intel)" ]; then
+            echo "no change"
+            exit 0
+          fi
+          git add intel
+          git commit -m "chore(intel): $(date -u +%Y-%m-%d) 每日情报"
+          git push
