@@ -1,4 +1,4 @@
-name: daily-intel
+﻿name: daily-intel
 
 on:
   schedule:
@@ -26,6 +26,7 @@ jobs:
 
       - name: Generate today's intel
         env:
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           QODER_PAT: ${{ secrets.QODER_PAT }}
           QODER_AGENT_ID: ${{ secrets.QODER_AGENT_ID }}
           QODER_ENVIRONMENT_ID: ${{ secrets.QODER_ENVIRONMENT_ID }}
