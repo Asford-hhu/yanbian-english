@@ -5,6 +5,11 @@ on:
     # 每天 23:00 UTC = 次日 07:00 北京时间
     - cron: '0 23 * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'intel/gen.mjs'
+      - '.github/workflows/intel.yml'
 
 permissions:
   contents: write
@@ -15,6 +20,8 @@ concurrency:
 
 jobs:
   gen:
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, 'chore(intel)')
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, 'chore(intel)')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
